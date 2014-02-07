@@ -4,11 +4,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.demo</groupId>
-    <artifactId>demo</artifactId>
+    <artifactId>producer</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
-    <name>demo</name>
-    <description>Demo project</description>
+    <name>producer</name>
 
     <parent>
         <groupId>org.springframework.boot</groupId>

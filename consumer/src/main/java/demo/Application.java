@@ -1,39 +1,27 @@
 package demo;
 
-import com.force.api.ForceApi;
-import com.force.api.QueryResult;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.annotate.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.SecurityAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.ImportResource;
-import org.springframework.stereotype.Controller;
-import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
-@Configuration
-@ImportResource("/salesforceContext.xml")
 @ComponentScan
-@EnableAutoConfiguration(exclude = SecurityAutoConfiguration.class)
+@EnableAutoConfiguration
 public class Application {
 
     public final static String CONTACTS = "contacts";
@@ -41,28 +29,26 @@ public class Application {
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
     }
-
-    @Bean
-    ForceApiFactoryBean forceApiFactoryBean() {
-        return new ForceApiFactoryBean();
-    }
-
 }
 
-
 @Configuration
-class RabbitProducerConfiguration {
-
-    @Bean
-    Jackson2JsonMessageConverter jsonMessageConverter() {
-        return new Jackson2JsonMessageConverter();
-    }
+class RabbitConsumerConfiguration {
 
     @Bean
     RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, MessageConverter messageConverter) {
         RabbitTemplate rt = new RabbitTemplate(connectionFactory);
         rt.setMessageConverter(messageConverter);
         return rt;
+    }
+
+    @Bean
+    TaskScheduler taskScheduler(ScheduledExecutorService simpleAsyncTaskExecutor) {
+        return new ConcurrentTaskScheduler(simpleAsyncTaskExecutor);
+    }
+
+    @Bean
+    Jackson2JsonMessageConverter jsonMessageConverter() {
+        return new Jackson2JsonMessageConverter();
     }
 
     @Bean
@@ -86,73 +72,36 @@ class RabbitProducerConfiguration {
                 .to(directExchange)
                 .with(Application.CONTACTS);
     }
-}
 
+    @Bean
+    SimpleMessageListenerContainer simpleMessageListenerContainer(
+            TaskExecutor taskExecutor,
+            Queue customerQueue,
+            final MessageConverter jsonMessageConverter,
+            ConnectionFactory connectionFactory) {
 
-@Service
-class ContactService {
-    private Log logger = LogFactory.getLog(getClass());
-
-    @Autowired
-    private ForceApi forceApi; // thread safe proxy
-
-    @Autowired
-    private RabbitTemplate rabbitTemplate;
-
-    public List<Contact> listContacts() {
-        QueryResult<Contact> res = forceApi.query(
-                "SELECT MailingState, MailingCountry, MailingStreet , MailingPostalCode, Email,  Id, FirstName, LastName FROM contact", Contact.class);
-        List<Contact> contacts = new ArrayList<>();
-        for (Contact c : res.getRecords())
-            if (StringUtils.hasText(c.getMailingStreet()))
-                contacts.add(c);
-        return contacts;
+        SimpleMessageListenerContainer smlc = new SimpleMessageListenerContainer();
+        smlc.setMessageListener(new MessageListener() {
+            @Override
+            public void onMessage(Message message) {
+                Contact contact = (Contact) jsonMessageConverter.fromMessage(message);
+                System.out.println("Received new contact " + contact.toString());
+            }
+        });
+        smlc.setTaskExecutor(taskExecutor);
+        smlc.setAutoStartup(true);
+        smlc.setQueues(customerQueue);
+        smlc.setConcurrentConsumers(10);
+        smlc.setConnectionFactory(connectionFactory);
+        return smlc;
     }
 
-    public void process(Contact contact) {
-        try {
-            this.rabbitTemplate.convertAndSend(Application.CONTACTS, contact);
-        } catch (Throwable ex) {
-            logger.debug("couldn't send the message!", ex);
-        }
-    }
-
-
-    public void removeContact(String id) {
-        forceApi.deleteSObject("contact", id);
-    }
-
-    public void addContact(Contact contact) {
-        forceApi.createSObject("contact", contact);
+    @Bean
+    ScheduledExecutorService taskExecutor() {
+        return Executors.newScheduledThreadPool(10);
     }
 }
 
-@RestController
-class ContactRestController {
-
-    @Autowired
-    private ContactService contactService;
-
-
-    @RequestMapping("/contacts")
-    public List<Contact> contacts() {
-        return this.contactService.listContacts();
-    }
-
-    @RequestMapping(value = "/map", method = RequestMethod.POST)
-    public void processContact(@RequestBody Contact contact) {
-        this.contactService.process(contact);
-    }
-}
-
-@Controller
-class ContactMvcController {
-
-    @RequestMapping("/")
-    public String home() {
-        return "contacts";
-    }
-}
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 class Contact {
