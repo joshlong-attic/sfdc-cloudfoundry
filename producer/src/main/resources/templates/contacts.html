@@ -1,0 +1,35 @@
+<!doctype html>
+<html ng-app="contacts">
+<head>
+    <title>Getting Started: Serving Web Content</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+
+    <script src="webjars/angularjs/1.2.11/angular.min.js"></script>
+    <script src="webjars/angularjs/1.2.11/angular-resource.min.js"></script>
+
+    <script language="JavaScript">
+        var appName = 'contacts';
+        var module = angular.module(appName, [ 'ngResource' /*, 'ngSanitize', 'ui'*/]);
+        function ContactsController($scope, $http) {
+            $http.get('/contacts').success(function (data) {
+                $scope.contacts = data;
+            });
+        }
+    </script>
+</head>
+<body>
+<h1> Contacts
+</h1>
+
+<div ng-controller="ContactsController">
+    <table>
+        <tr ng-repeat="c in contacts">
+            <td><span style="color: lightgrey">{{c.id}}</span></td>
+            <td><span>{{c.firstName}} {{c.lastName}}</span></td>
+            <td><span>{{c.email}}</span></td>
+            <td><span>{{c.mailingStreet}}</span></td>
+        </tr>
+    </table>
+</div>
+</body>
+</html>
