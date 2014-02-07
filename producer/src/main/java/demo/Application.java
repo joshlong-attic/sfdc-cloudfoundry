@@ -46,9 +46,7 @@ public class Application {
     ForceApiFactoryBean forceApiFactoryBean() {
         return new ForceApiFactoryBean();
     }
-
 }
-
 
 @Configuration
 class RabbitProducerConfiguration {
@@ -116,7 +114,6 @@ class ContactService {
             logger.debug("couldn't send the message!", ex);
         }
     }
-
 
     public void removeContact(String id) {
         forceApi.deleteSObject("contact", id);
