@@ -4,6 +4,7 @@ import com.force.api.ForceApi;
 import com.force.api.QueryResult;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonProperty;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -14,9 +15,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportResource;
 import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Configuration
@@ -35,6 +40,7 @@ public class Application {
     }
 }
 
+
 @Service
 class ContactService {
 
@@ -48,7 +54,11 @@ class ContactService {
     public List<Contact> listPeople() {
         QueryResult<Contact> res = forceApi.query(
                 "SELECT MailingState, MailingCountry, MailingStreet , MailingPostalCode, Email,  Id, FirstName, LastName FROM contact", Contact.class);
-        return res.getRecords();
+        List<Contact> contacts = new ArrayList<>();
+        for (Contact c : res.getRecords())
+            if (StringUtils.hasText(c.getMailingStreet()))
+                contacts.add(c);
+        return contacts;
     }
 
     public void removePerson(String id) {
@@ -62,11 +72,18 @@ class ContactRestController {
     @Autowired
     private ContactService contactService;
 
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
     @RequestMapping("/contacts")
     public List<Contact> contacts() {
         return this.contactService.listPeople();
     }
 
+    @RequestMapping(value = "/map", method = RequestMethod.POST)
+    public void processContact(@RequestBody Contact contact) {
+        this.rabbitTemplate.convertAndSend("contacts", "contacts", contact);
+    }
 }
 
 @Controller
@@ -105,16 +122,16 @@ class Contact {
     @JsonProperty(value = "MailingPostalCode")
     private String mailingPostalCode;
 
-    public String getMailingCity() {
-        return mailingCity;
-    }
+    @JsonProperty(value = "Email")
+    private String email;
 
     public void setMailingCity(String mailingCity) {
         this.mailingCity = mailingCity;
     }
 
-    @JsonProperty(value = "Email")
-    private String email;
+    public String getMailingCity() {
+        return mailingCity;
+    }
 
     public String getId() {
         return id;
@@ -180,3 +197,6 @@ class Contact {
         this.email = email;
     }
 }
+
+
+// todo create a Cloud Foundry specific Java configuration class for our RabbitMQ connection-factory

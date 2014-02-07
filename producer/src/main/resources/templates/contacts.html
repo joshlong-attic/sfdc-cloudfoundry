@@ -11,9 +11,32 @@
         var appName = 'contacts';
         var module = angular.module(appName, [ 'ngResource' /*, 'ngSanitize', 'ui'*/]);
         function ContactsController($scope, $http) {
+
+            // load the page data
             $http.get('/contacts').success(function (data) {
                 $scope.contacts = data;
             });
+
+            $scope.processContact = function (contact) {
+                // support processing individual rows
+                $http.post("/map", contact).success(function(data){
+                    //Callback function here.
+                    //"data" is the response from the server.
+                    window.alert( 'received response: ' + JSON.stringify(data));
+                });
+            /*    $http({
+                    url: '/map',
+                    method: "POST",
+                    data: JSON.stringify( contact),
+                    headers: {'Content-Type': 'application/json'}
+                }).success(function (data, status, headers, config) {
+                    window.alert('the record for ' + contact.firstName + ' ' + contact.lastName + ' has been sent for processing!');
+                }).error(function (data, status, headers, config) {
+                    window.alert('something happened! ' + status);
+                });*/
+            };
+
+
         }
     </script>
 </head>
@@ -25,9 +48,12 @@
     <table>
         <tr ng-repeat="c in contacts">
             <td><span style="color: lightgrey">{{c.id}}</span></td>
-            <td><span>{{c.firstName}} {{c.lastName}}</span></td>
-            <td><span>{{c.email}}</span></td>
-            <td><span>{{c.mailingStreet}}</span></td>
+            <td> {{c.firstName}} {{c.lastName}}</td>
+            <td> {{c.email}}</td>
+            <td> {{c.mailingStreet}}</td>
+            <td>
+                <a ng-click="processContact(c)" href="#">Throw to Map</a>
+            </td>
         </tr>
     </table>
 </div>
