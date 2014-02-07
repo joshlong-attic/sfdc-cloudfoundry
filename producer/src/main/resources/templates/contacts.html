@@ -20,20 +20,9 @@
             $scope.processContact = function (contact) {
                 // support processing individual rows
                 $http.post("/map", contact).success(function(data){
-                    //Callback function here.
-                    //"data" is the response from the server.
-                    window.alert( 'received response: ' + JSON.stringify(data));
+                      window.alert( 'sent!' );
                 });
-            /*    $http({
-                    url: '/map',
-                    method: "POST",
-                    data: JSON.stringify( contact),
-                    headers: {'Content-Type': 'application/json'}
-                }).success(function (data, status, headers, config) {
-                    window.alert('the record for ' + contact.firstName + ' ' + contact.lastName + ' has been sent for processing!');
-                }).error(function (data, status, headers, config) {
-                    window.alert('something happened! ' + status);
-                });*/
+
             };
 
 

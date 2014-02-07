@@ -2,9 +2,18 @@ package demo;
 
 import com.force.api.ForceApi;
 import com.force.api.QueryResult;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonProperty;
+import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
+import org.springframework.amqp.rabbit.transaction.RabbitTransactionManager;
+import org.springframework.amqp.support.converter.JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -13,6 +22,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportResource;
+import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler;
 import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -23,12 +35,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 @Configuration
 @ImportResource("/salesforceContext.xml")
 @ComponentScan
 @EnableAutoConfiguration(exclude = SecurityAutoConfiguration.class)
 public class Application {
+
+    private Log logger = LogFactory.getLog(getClass());
+
+    public static final String CONTACTS_DESTINATION = "contacts";
 
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
@@ -38,20 +56,105 @@ public class Application {
     ForceApiFactoryBean forceApiFactoryBean() {
         return new ForceApiFactoryBean();
     }
+
+}
+
+@Configuration
+class RabbitConsumerConfiguration {
+
+    @Bean
+    TaskScheduler taskScheduler(ScheduledExecutorService simpleAsyncTaskExecutor) {
+        return new ConcurrentTaskScheduler(simpleAsyncTaskExecutor);
+    }
+/*
+
+
+    @Bean
+    JsonMessageConverter jsonMessageConverter() {
+        return new JsonMessageConverter();
+    }
+*/
+
+    @Bean
+    SimpleMessageListenerContainer simpleMessageListenerContainer(
+            TaskExecutor taskExecutor,
+            Queue customerQueue,
+           final MessageConverter jsonMessageConverter,
+            ConnectionFactory connectionFactory) {
+
+        SimpleMessageListenerContainer smlc = new SimpleMessageListenerContainer();
+        smlc.setMessageListener(new MessageListener() {
+            @Override
+            public void onMessage(Message message) {
+                Contact contact = (Contact) jsonMessageConverter.fromMessage(message);
+                System.out.println("Received new contact " + contact.toString());
+            }
+        });
+        smlc.setTaskExecutor(taskExecutor);
+        smlc.setAutoStartup(true);
+        smlc.setQueues(customerQueue);
+        smlc.setConcurrentConsumers(10);
+        smlc.setConnectionFactory(connectionFactory);
+        return smlc;
+    }
+
+    @Bean
+    ScheduledExecutorService taskExecutor() {
+        return Executors.newScheduledThreadPool(10);
+    }
+}
+
+
+@Configuration
+class RabbitProducerConfiguration {
+
+
+    private String customersQueueAndExchangeName = Application.CONTACTS_DESTINATION;
+
+
+
+
+    @Bean
+    JsonMessageConverter jsonMessageConverter() {
+        return new JsonMessageConverter();
+    }
+
+
+    @Bean
+    Queue customerQueue(AmqpAdmin amqpAdmin) {
+        Queue q = new Queue(this.customersQueueAndExchangeName);
+        amqpAdmin.declareQueue(q);
+        return q;
+    }
+
+    @Bean
+    DirectExchange customerExchange(AmqpAdmin amqpAdmin) {
+        DirectExchange directExchange = new DirectExchange(this.customersQueueAndExchangeName);
+        amqpAdmin.declareExchange(directExchange);
+        return directExchange;
+    }
+
+    @Bean
+    Binding marketDataBinding(Queue customerQueue, DirectExchange directExchange) {
+        return BindingBuilder
+                .bind(customerQueue)
+                .to(directExchange)
+                .with(this.customersQueueAndExchangeName);
+    }
 }
 
 
 @Service
 class ContactService {
+    private Log logger = LogFactory.getLog(getClass());
 
     @Autowired
     private ForceApi forceApi; // thread safe proxy
 
-    public void addPerson(Contact contact) {
-        forceApi.createSObject("contact", contact);
-    }
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
-    public List<Contact> listPeople() {
+    public List<Contact> listContacts() {
         QueryResult<Contact> res = forceApi.query(
                 "SELECT MailingState, MailingCountry, MailingStreet , MailingPostalCode, Email,  Id, FirstName, LastName FROM contact", Contact.class);
         List<Contact> contacts = new ArrayList<>();
@@ -61,8 +164,22 @@ class ContactService {
         return contacts;
     }
 
-    public void removePerson(String id) {
+    public void process(Contact contact) {
+        String destination = Application.CONTACTS_DESTINATION;
+        try {
+            this.rabbitTemplate.convertAndSend(destination, contact);
+        } catch (Throwable ex) {
+            logger.debug("couldn't send the message!", ex);
+        }
+    }
+
+
+    public void removeContact(String id) {
         forceApi.deleteSObject("contact", id);
+    }
+
+    public void addContact(Contact contact) {
+        forceApi.createSObject("contact", contact);
     }
 }
 
@@ -72,25 +189,23 @@ class ContactRestController {
     @Autowired
     private ContactService contactService;
 
-    @Autowired
-    private RabbitTemplate rabbitTemplate;
 
     @RequestMapping("/contacts")
     public List<Contact> contacts() {
-        return this.contactService.listPeople();
+        return this.contactService.listContacts();
     }
 
     @RequestMapping(value = "/map", method = RequestMethod.POST)
     public void processContact(@RequestBody Contact contact) {
-        this.rabbitTemplate.convertAndSend("contacts", "contacts", contact);
+        this.contactService.process(contact);
     }
 }
 
 @Controller
 class ContactMvcController {
 
-    @RequestMapping("/contacts.html")
-    public String contacts() {
+    @RequestMapping("/")
+    public String home() {
         return "contacts";
     }
 }
@@ -197,6 +312,5 @@ class Contact {
         this.email = email;
     }
 }
-
 
 // todo create a Cloud Foundry specific Java configuration class for our RabbitMQ connection-factory
