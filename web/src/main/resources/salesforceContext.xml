@@ -8,7 +8,9 @@
                            http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd">
 
     <fss:oauth>
-        <fss:oauthInfo endpoint="http://login.salesforce.com" oauth-key="${clientKey}" oauth-secret="${clientSecret}"/>
+        <fss:oauthInfo endpoint="http://login.salesforce.com"
+                       oauth-key="${clientKey}" oauth-secret="${clientSecret}"/>
+
     </fss:oauth>
 
     <security:http use-expressions="true">

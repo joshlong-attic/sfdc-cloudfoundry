@@ -1,18 +1,25 @@
-<!doctype html>
-<html ng-app="contacts">
+<!DOCTYPE HTML>
+<html ng-app="sfdc"
+      xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Getting Started: Serving Web Content</title>
+
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 
+    <title>Console</title>
+
+    <script src="webjars/jquery/2.0.3/jquery.min.js"></script>
     <script src="webjars/angularjs/1.2.11/angular.min.js"></script>
     <script src="webjars/angularjs/1.2.11/angular-resource.min.js"></script>
 
     <script language="JavaScript">
-        var appName = 'contacts';
+        var appName = 'sfdc';
         var module = angular.module(appName, [ 'ngResource' /*, 'ngSanitize', 'ui'*/]);
-        function ContactsController($scope, $http) {
 
-            // load the page data
+
+        function SfdcController ($scope, $http) {
+
+           /* // load the page data
             $http.get('/contacts').success(function (data) {
                 $scope.contacts = data;
             });
@@ -23,18 +30,18 @@
                       window.alert( 'sent!' );
                 });
 
-            };
+            };*/
 
 
         }
     </script>
 </head>
 <body>
-<h1> Contacts
+<h1> SFDC Lead Enricher
 </h1>
 
-<div ng-controller="ContactsController">
-    <table>
+<div ng-controller="SfdcController">
+   <!-- <table>
         <tr ng-repeat="c in contacts">
             <td><span style="color: lightgrey">{{c.id}}</span></td>
             <td> {{c.firstName}} {{c.lastName}}</td>
@@ -44,7 +51,17 @@
                 <a ng-click="processContact(c)" href="#">Throw to Map</a>
             </td>
         </tr>
-    </table>
+    </table>-->
+
+
+
+    <div id="status">
+
+        {{user.email}}
+
+    </div>
+
+
 </div>
 </body>
 </html>

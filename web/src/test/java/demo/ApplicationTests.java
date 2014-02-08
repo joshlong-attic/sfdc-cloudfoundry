@@ -7,7 +7,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = Application.class, loader=SpringApplicationContextLoader.class)
+@ContextConfiguration(classes = SfdcConsoleApplication.class, loader=SpringApplicationContextLoader.class)
 public class ApplicationTests {
 
 	@Test
