@@ -6,8 +6,8 @@
 
     <title>Console</title>
 
-    <script src="webjars/angularjs/1.2.11/angular.min.js"></script>
-    <script src="webjars/angularjs/1.2.11/angular-resource.min.js"></script>
+    <script src="webjars/angularjs/1.2.11/angular.js"></script>
+    <script src="webjars/angularjs/1.2.11/angular-resource.js"></script>
 
     <script language="JavaScript">
         var appName = 'sfdc';
@@ -22,7 +22,7 @@
 
             $scope.process = function () {
                 $http.post('/process').success(function (data) {
-                    $scope.process = data;
+                    $scope.batchData = data;
                 });
             };
 
@@ -45,15 +45,15 @@
         <table>
             <tr>
                 <td style="color: lightgrey">Batch ID</td>
-                <td>{{process.batchId}}</td>
+                <td>{{batchData.batchId}}</td>
             </tr>
             <tr>
                 <td style="color: lightgrey">Access Token</td>
-                <td> {{process.accessToken}}</td>
+                <td> {{batchData.accessToken}}</td>
             </tr>
             <tr>
                 <td style="color: lightgrey">API Endpoint</td>
-                <td> {{process.apiEndpoint}}</td>
+                <td> {{batchData.apiEndpoint}}</td>
             </tr>
         </table>
 
