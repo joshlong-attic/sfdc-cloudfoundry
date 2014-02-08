@@ -1,14 +1,11 @@
 <!DOCTYPE HTML>
-<html ng-app="sfdc"
-      xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:th="http://www.thymeleaf.org">
+<html ng-app="sfdc" xmlns="http://www.w3.org/1999/xhtml">
 <head>
 
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 
     <title>Console</title>
 
-    <script src="webjars/jquery/2.0.3/jquery.min.js"></script>
     <script src="webjars/angularjs/1.2.11/angular.min.js"></script>
     <script src="webjars/angularjs/1.2.11/angular-resource.min.js"></script>
 
@@ -17,21 +14,17 @@
         var module = angular.module(appName, [ 'ngResource' /*, 'ngSanitize', 'ui'*/]);
 
 
-        function SfdcController ($scope, $http) {
+        function SfdcController($scope, $http) {
 
-           /* // load the page data
-            $http.get('/contacts').success(function (data) {
-                $scope.contacts = data;
+            $http.get('/user').success(function (data) {
+                $scope.user = data;
             });
 
-            $scope.processContact = function (contact) {
-                // support processing individual rows
-                $http.post("/map", contact).success(function(data){
-                      window.alert( 'sent!' );
+            $scope.process = function () {
+                $http.post('/process').success(function (data) {
+                    $scope.process = data;
                 });
-
-            };*/
-
+            };
 
         }
     </script>
@@ -41,23 +34,28 @@
 </h1>
 
 <div ng-controller="SfdcController">
-   <!-- <table>
-        <tr ng-repeat="c in contacts">
-            <td><span style="color: lightgrey">{{c.id}}</span></td>
-            <td> {{c.firstName}} {{c.lastName}}</td>
-            <td> {{c.email}}</td>
-            <td> {{c.mailingStreet}}</td>
-            <td>
-                <a ng-click="processContact(c)" href="#">Throw to Map</a>
-            </td>
-        </tr>
-    </table>-->
-
-
 
     <div id="status">
 
-        {{user.email}}
+        <div>Welcome <b>{{user.username}}</b>!</div>
+
+        <div><a ng-click="process()" href=""> Click here to launch a synchronization process for your account. </a>
+        </div>
+        <br/>
+        <table>
+            <tr>
+                <td style="color: lightgrey">Batch ID</td>
+                <td>{{process.batchId}}</td>
+            </tr>
+            <tr>
+                <td style="color: lightgrey">Access Token</td>
+                <td> {{process.accessToken}}</td>
+            </tr>
+            <tr>
+                <td style="color: lightgrey">API Endpoint</td>
+                <td> {{process.apiEndpoint}}</td>
+            </tr>
+        </table>
 
     </div>
 

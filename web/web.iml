@@ -11,6 +11,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Maven: org.webjars:jquery:2.0.3-1" level="project" />
     <orderEntry type="library" name="Maven: org.webjars:angularjs:1.2.11" level="project" />
     <orderEntry type="library" name="Maven: com.force.sdk:force-oauth:22.0.8-BETA" level="project" />
     <orderEntry type="library" name="Maven: com.force.api:force-partner-api:22.0.0" level="project" />

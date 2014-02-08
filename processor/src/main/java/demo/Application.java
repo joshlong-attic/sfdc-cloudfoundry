@@ -34,6 +34,114 @@ class ConsumerController {
 
 }
 
+/*
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+class Contact {
+
+    @JsonProperty(value = "Id")
+    private String id;
+
+    @JsonProperty(value = "FirstName")
+    private String firstName;
+
+    @JsonProperty(value = "LastName")
+    private String lastName;
+
+    @JsonProperty(value = "MailingCity")
+    private String mailingCity;
+
+    @JsonProperty(value = "MailingState")
+    private String mailingState;
+
+    @JsonProperty(value = "MailingCountry")
+    private String mailingCountry;
+
+    @JsonProperty(value = "MailingStreet")
+    private String mailingStreet;
+
+    @JsonProperty(value = "MailingPostalCode")
+    private String mailingPostalCode;
+
+    @JsonProperty(value = "Email")
+    private String email;
+
+    public void setMailingCity(String mailingCity) {
+        this.mailingCity = mailingCity;
+    }
+
+    public String getMailingCity() {
+        return mailingCity;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getMailingState() {
+        return mailingState;
+    }
+
+    public void setMailingState(String mailingState) {
+        this.mailingState = mailingState;
+    }
+
+    public String getMailingCountry() {
+        return mailingCountry;
+    }
+
+    public void setMailingCountry(String mailingCountry) {
+        this.mailingCountry = mailingCountry;
+    }
+
+    public String getMailingStreet() {
+        return mailingStreet;
+    }
+
+    public void setMailingStreet(String mailingStreet) {
+        this.mailingStreet = mailingStreet;
+    }
+
+    public String getMailingPostalCode() {
+        return mailingPostalCode;
+    }
+
+    public void setMailingPostalCode(String mailingPostalCode) {
+        this.mailingPostalCode = mailingPostalCode;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+}
+
+// todo create a Cloud Foundry specific Java configuration class for our RabbitMQ connection-factory*/
+
+
 @ComponentScan
 @EnableAutoConfiguration
 public class Application {
@@ -82,6 +190,50 @@ class GreetingController {
 
 */
 
+/*
+
+class ContactService {
+    private Log logger = LogFactory.getLog(getClass());
+
+    //  @Autowired
+    private ForceApi forceApi; // thread safe proxy
+
+    ContactService(ForceApi forceApi) {
+        this.forceApi = forceApi;
+    }
+
+    // @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    public List<Contact> listContacts() {
+        QueryResult<Contact> res = forceApi.query(
+                "SELECT MailingState, MailingCountry, MailingStreet , MailingPostalCode, Email,  Id, FirstName, LastName FROM contact", Contact.class);
+        List<Contact> contacts = new ArrayList<>();
+        for (Contact c : res.getRecords())
+            if (StringUtils.hasText(c.getMailingStreet()))
+                contacts.add(c);
+        return contacts;
+    }
+
+    public void process(Contact contact) {
+        try {
+            this.rabbitTemplate.convertAndSend(Application.CONTACTS, contact);
+        } catch (Throwable ex) {
+            logger.debug("couldn't send the message!", ex);
+        }
+    }
+
+    public void removeContact(String id) {
+        forceApi.deleteSObject("contact", id);
+    }
+
+    public void addContact(Contact contact) {
+        forceApi.createSObject("contact", contact);
+    }
+}*/
+/*
+
+*/
 // register some pages
 @Component
 class ConsumerMvcConfiguration extends WebMvcConfigurerAdapter {
