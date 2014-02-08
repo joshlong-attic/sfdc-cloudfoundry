@@ -45,12 +45,22 @@ public class SfdcConsoleApplication {
     }
 
     @Bean
-    ForceApi forceApiProxy() {
-        ProxyFactoryBean proxyFactoryBean = new ProxyFactoryBean();
-        proxyFactoryBean.addAdvice(new MethodInterceptor() {
+    SecurityContext securityContext() {
+        return this.proxy(SecurityContext.class, new MethodInterceptor() {
             @Override
             public Object invoke(MethodInvocation invocation) throws Throwable {
                 SecurityContext securityContext = ForceSecurityContextHolder.get(true);
+                return invocation.getMethod().invoke(securityContext, invocation.getArguments());
+            }
+        });
+    }
+
+    @Bean
+    ForceApi forceApiProxy() {
+        return this.proxy(ForceApi.class, new MethodInterceptor() {
+            @Override
+            public Object invoke(MethodInvocation invocation) throws Throwable {
+                SecurityContext securityContext = securityContext();
                 ApiSession session = new ApiSession();
                 session.setAccessToken(securityContext.getSessionId());
                 session.setApiEndpoint(securityContext.getEndPointHost());
@@ -58,9 +68,14 @@ public class SfdcConsoleApplication {
                 return invocation.getMethod().invoke(forceApi, invocation.getArguments());
             }
         });
+    }
+
+    private <T> T proxy(Class<T> tClass, MethodInterceptor methodInterceptor) {
+        ProxyFactoryBean proxyFactoryBean = new ProxyFactoryBean();
+        proxyFactoryBean.addAdvice(methodInterceptor);
         proxyFactoryBean.setProxyTargetClass(true);
-        proxyFactoryBean.setTargetClass(ForceApi.class);
-        return (ForceApi) proxyFactoryBean.getObject();
+        proxyFactoryBean.setTargetClass(tClass);
+        return tClass.cast(proxyFactoryBean.getObject());
     }
 }
 
@@ -131,9 +146,9 @@ class SfdcRestController {
         return new ResponseEntity<Map<?, ?>>(payload, HttpStatus.OK);
     }
 
-    protected Map<String, String> beginProcessing(String batchCorrelationId,
-                                                  String accessToken,
-                                                  String apiEndpoint) {
+    private Map<String, String> beginProcessing(String batchCorrelationId,
+                                                String accessToken,
+                                                String apiEndpoint) {
         Map<String, String> stringStringMap = new HashMap<>();
         stringStringMap.put("batchId", batchCorrelationId);
         stringStringMap.put("accessToken", accessToken);
