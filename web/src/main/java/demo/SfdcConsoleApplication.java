@@ -15,6 +15,7 @@ import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -31,9 +32,25 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+
+@Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Qualifier
+@interface Request {
+}
+
+@Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Qualifier
+@interface Reply {
+}
 
 @ImportResource("/salesforceContext.xml")
 @Configuration
@@ -81,7 +98,8 @@ public class SfdcConsoleApplication {
 }
 
 @Configuration
-class SfdcRabbitProducerConfiguration {
+class RabbitConfiguration {
+
 
     @Bean
     Jackson2JsonMessageConverter jsonMessageConverter() {
@@ -89,39 +107,71 @@ class SfdcRabbitProducerConfiguration {
     }
 
     @Bean
-    RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, MessageConverter messageConverter) {
+    RabbitTemplate rabbitTemplate(@Request Queue request, @Reply Queue replyQueue, ConnectionFactory connectionFactory, MessageConverter messageConverter) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setMessageConverter(messageConverter);
+      /*  template.setReplyQueue(replyQueue);
+        template.setQueue(request.getName());*/
+        template.setReplyTimeout(30 * 1000);
         return template;
     }
 
     @Bean
-    Queue customerQueue(AmqpAdmin amqpAdmin, @Value("${processor.destination}") String destination) {
+    @Request
+    Queue requests(AmqpAdmin amqpAdmin, @Value("${processor.requests}") String destination) {
         Queue q = new Queue(destination);
         amqpAdmin.declareQueue(q);
         return q;
     }
 
     @Bean
-    DirectExchange customerExchange(AmqpAdmin amqpAdmin, @Value("${processor.destination}") String destination) {
-        DirectExchange directExchange = new DirectExchange(destination);
+    @Reply
+    Queue replies(AmqpAdmin amqpAdmin, @Value("${processor.replies}") String destination) {
+        Queue q = new Queue(destination);
+        amqpAdmin.declareQueue(q);
+        return q;
+    }
+
+    @Bean
+    @Reply
+    DirectExchange repliesExchange(AmqpAdmin amqpAdmin, @Reply Queue queue) {
+        DirectExchange directExchange = new DirectExchange(queue.getName());
         amqpAdmin.declareExchange(directExchange);
         return directExchange;
     }
 
     @Bean
-    Binding marketDataBinding(Queue customerQueue, DirectExchange directExchange, @Value("${processor.destination}") String destination) {
-        return BindingBuilder
-                .bind(customerQueue)
-                .to(directExchange)
-                .with(destination);
+    @Request
+    DirectExchange requestsExchange(AmqpAdmin amqpAdmin, @Request Queue queue) {
+        DirectExchange directExchange = new DirectExchange(queue.getName());
+        amqpAdmin.declareExchange(directExchange);
+        return directExchange;
     }
+
+    @Bean
+    @Reply
+    Binding replyBinding(@Reply Queue q, @Reply DirectExchange e, @Value("${processor.replies}") String d) {
+        return BindingBuilder
+                .bind(q)
+                .to(e)
+                .with(d);
+    }
+
+    @Bean
+    @Request
+    Binding requestBinding(@Request Queue q, @Request DirectExchange e, @Value("${processor.requests}") String d) {
+        return BindingBuilder
+                .bind(q)
+                .to(e)
+                .with(d);
+    }
+
 }
 
 @RestController
 class SfdcRestController {
 
-    @Value("${processor.destination}")
+    @Value("${processor.requests}")
     String destination;
 
     @Autowired
@@ -129,6 +179,14 @@ class SfdcRestController {
 
     @Autowired
     ForceApi forceApi;
+
+    @Request
+    @Autowired
+    Queue requests;
+
+    @Reply
+    @Autowired
+    Queue replies;
 
     @RequestMapping(value = "/user", method = RequestMethod.GET)
     Identity user() {
@@ -147,22 +205,30 @@ class SfdcRestController {
         return new ResponseEntity<Map<?, ?>>(payload, HttpStatus.OK);
     }
 
-    private Map<String, String> beginProcessing(String batchCorrelationId,
-                                                String accessToken,
-                                                String apiEndpoint) {
+    private Map<String, String> beginProcessing(final String batchId,
+                                                final String accessToken,
+                                                final String apiEndpoint) {
         final Map<String, String> stringStringMap = new HashMap<>();
-        stringStringMap.put("batchId", batchCorrelationId);
+        stringStringMap.put("batchId", batchId);
         stringStringMap.put("accessToken", accessToken);
         stringStringMap.put("apiEndpoint", apiEndpoint);
+        Object msg = rabbitTemplate.convertSendAndReceive(this.requests.getName(),
+                (Object) batchId,
+                new MessagePostProcessor() {
+                    @Override
+                    public Message postProcessMessage(Message message) throws AmqpException {
+                        MessageProperties messageProperties = message.getMessageProperties();
+                        for (String h : stringStringMap.keySet())
+                            messageProperties.setHeader(h, stringStringMap.get(h));
+//                        messageProperties.setCorrelationId(batchId.getBytes());
+//                        messageProperties.setReplyTo( );
+                        return message;
+                    }
+                });
 
-        this.rabbitTemplate.convertAndSend(this.destination, (Object) batchCorrelationId, new MessagePostProcessor() {
-            @Override
-            public Message postProcessMessage(Message message) throws AmqpException {
-                for (String k : stringStringMap.keySet())
-                    message.getMessageProperties().setHeader(k, stringStringMap.get(k));
-                return message;
-            }
-        });
+        System.out.println(null == msg ? "" : msg.toString());
+
+
         return stringStringMap;
     }
 }

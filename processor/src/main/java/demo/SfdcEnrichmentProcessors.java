@@ -22,9 +22,10 @@ public class SfdcEnrichmentProcessors {
     }
 }
 
-
 @Configuration
-class RabbitConsumerConfiguration {
+class RabbitConfiguration {
+
+
 
     @Bean
     Jackson2JsonMessageConverter jsonMessageConverter() {
@@ -32,33 +33,61 @@ class RabbitConsumerConfiguration {
     }
 
     @Bean
-    RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, MessageConverter messageConverter) {
+    RabbitTemplate rabbitTemplate(@Reply Queue replyQueue, ConnectionFactory connectionFactory, MessageConverter messageConverter) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setMessageConverter(messageConverter);
+        template.setQueue(replyQueue.getName() );
         return template;
     }
 
     @Bean
-    Queue customerQueue(AmqpAdmin amqpAdmin, @Value("${processor.destination}") String destination) {
+    @Request
+    Queue requests(AmqpAdmin amqpAdmin, @Value("${processor.requests}") String destination) {
         Queue q = new Queue(destination);
         amqpAdmin.declareQueue(q);
         return q;
     }
 
     @Bean
-    DirectExchange customerExchange(AmqpAdmin amqpAdmin, @Value("${processor.destination}") String destination) {
-        DirectExchange directExchange = new DirectExchange(destination);
+    @Reply
+    Queue replies(AmqpAdmin amqpAdmin, @Value("${processor.replies}") String destination) {
+        Queue q = new Queue(destination);
+        amqpAdmin.declareQueue(q);
+        return q;
+    }
+
+    @Bean
+    @Reply
+    DirectExchange repliesExchange(AmqpAdmin amqpAdmin, @Reply Queue queue) {
+        DirectExchange directExchange = new DirectExchange(queue.getName());
         amqpAdmin.declareExchange(directExchange);
         return directExchange;
     }
 
     @Bean
-    Binding marketDataBinding(Queue customerQueue, DirectExchange directExchange, @Value("${processor.destination}") String destination) {
-        return BindingBuilder
-                .bind(customerQueue)
-                .to(directExchange)
-                .with(destination);
+    @Request
+    DirectExchange requestsExchange(AmqpAdmin amqpAdmin, @Request Queue queue) {
+        DirectExchange directExchange = new DirectExchange(queue.getName());
+        amqpAdmin.declareExchange(directExchange);
+        return directExchange;
     }
+
+    @Bean
+    @Reply
+    Binding replyBinding(@Reply Queue q, @Reply DirectExchange e, @Value("${processor.replies}") String d) {
+        return BindingBuilder
+                .bind(q)
+                .to(e)
+                .with(d);
+    }
+
+    @Bean
+    @Request
+    Binding requestBinding(@Request Queue q, @Request DirectExchange e, @Value("${processor.requests}") String d) {
+        return BindingBuilder
+                .bind(q)
+                .to(e)
+                .with(d);
+    }
+
 }
-
-
