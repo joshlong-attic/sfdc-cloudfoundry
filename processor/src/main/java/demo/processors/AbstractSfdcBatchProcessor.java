@@ -2,13 +2,12 @@ package demo.processors;
 
 import demo.SfdcBatchTemplate;
 import org.springframework.amqp.core.Message;
-import org.springframework.amqp.core.MessageListener;
 
 import java.util.Map;
 
 
 abstract class AbstractSfdcBatchProcessor
-        implements MessageListener, BatchProcessor {
+        implements BatchProcessor {
 
     private SfdcBatchTemplate sfdcBatchTemplate;
 

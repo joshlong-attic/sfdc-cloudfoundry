@@ -1,4 +1,6 @@
 package demo.processors;
 
-interface BatchProcessor {
+import org.springframework.amqp.core.MessageListener;
+
+interface BatchProcessor extends MessageListener {
 }

@@ -10,7 +10,7 @@ public class SfdcBatchTemplate {
 
     private ThreadLocal<String> batchIdThreadLocal = new ThreadLocal<>();
 
-    String requiredCurrentBatchId() {
+    public String requiredCurrentBatchId() {
         Assert.notNull(this.batchIdThreadLocal.get(), "something is wrong, there's no batchId");
         return this.batchIdThreadLocal.get();
     }

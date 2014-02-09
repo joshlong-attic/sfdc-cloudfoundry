@@ -140,7 +140,7 @@ class SfdcRestController {
         SecurityContext securityContext = ForceSecurityContextHolder.get();
         String at = securityContext.getSessionId();
         String endpoint = securityContext.getEndPointHost();
-        String uuid = UUID.randomUUID().toString();
+        String uuid = UUID.randomUUID().toString() + System.currentTimeMillis() + "";
 
         Map<String, String> payload = beginProcessing(uuid, at, endpoint);
 
