@@ -7,6 +7,7 @@ import com.force.sdk.oauth.context.ForceSecurityContextHolder;
 import com.force.sdk.oauth.context.SecurityContext;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -121,13 +122,13 @@ class SfdcRabbitProducerConfiguration {
 class SfdcRestController {
 
     @Value("${processor.destination}")
-    private String destination;
+    String destination;
 
     @Autowired
-    private RabbitTemplate rabbitTemplate;
+    RabbitTemplate rabbitTemplate;
 
     @Autowired
-    private ForceApi forceApi;
+    ForceApi forceApi;
 
     @RequestMapping(value = "/user", method = RequestMethod.GET)
     Identity user() {
@@ -149,11 +150,19 @@ class SfdcRestController {
     private Map<String, String> beginProcessing(String batchCorrelationId,
                                                 String accessToken,
                                                 String apiEndpoint) {
-        Map<String, String> stringStringMap = new HashMap<>();
+        final Map<String, String> stringStringMap = new HashMap<>();
         stringStringMap.put("batchId", batchCorrelationId);
         stringStringMap.put("accessToken", accessToken);
         stringStringMap.put("apiEndpoint", apiEndpoint);
-        this.rabbitTemplate.convertAndSend(this.destination, stringStringMap);
+
+        this.rabbitTemplate.convertAndSend(this.destination, (Object) batchCorrelationId, new MessagePostProcessor() {
+            @Override
+            public Message postProcessMessage(Message message) throws AmqpException {
+                for (String k : stringStringMap.keySet())
+                    message.getMessageProperties().setHeader(k, stringStringMap.get(k));
+                return message;
+            }
+        });
         return stringStringMap;
     }
 }
@@ -162,13 +171,12 @@ class SfdcRestController {
 class SfdcMvcController {
 
     @Autowired
-    private ForceApi forceApi;
+    ForceApi forceApi;
 
     @RequestMapping(value = "/", method = RequestMethod.GET)
-    public String contacts(Model model) {
+    String contacts(Model model) {
         Identity identity = this.forceApi.getIdentity();
         model.addAttribute("id", identity.getId());
         return "console";
     }
 }
-
