@@ -45,8 +45,6 @@ class SfdcProcessorsConfiguration {
                         h.get("batchId"), h.get("apiEndpoint"), h.get("accessToken"));
 
                   /*
-
-
                 for (BatchProcessor bp : bps) {
                     bp.onMessage(message);
                 }*/

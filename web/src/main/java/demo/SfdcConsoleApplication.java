@@ -3,10 +3,13 @@ package demo;
 import com.force.api.ApiSession;
 import com.force.api.ForceApi;
 import com.force.api.Identity;
+import com.force.sdk.oauth.ForceUserPrincipal;
 import com.force.sdk.oauth.context.ForceSecurityContextHolder;
 import com.force.sdk.oauth.context.SecurityContext;
+import com.force.sdk.springsecurity.OAuthAuthenticationToken;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.apache.log4j.Logger;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -36,6 +39,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -171,6 +175,8 @@ class RabbitConfiguration {
 @RestController
 class SfdcRestController {
 
+    private Logger logger = Logger.getLogger(getClass()) ;
+
     @Value("${processor.requests}")
     String destination;
 
@@ -194,43 +200,39 @@ class SfdcRestController {
     }
 
     @RequestMapping(value = "/process", method = RequestMethod.POST)
-    ResponseEntity<Map<?, ?>> process() {
+    ResponseEntity<Map<?, ?>> process(  OAuthAuthenticationToken t ) {
+
+
+        logger.debug( "the principal is "+ t.getName() );
         SecurityContext securityContext = ForceSecurityContextHolder.get();
         String at = securityContext.getSessionId();
         String endpoint = securityContext.getEndPointHost();
         String uuid = UUID.randomUUID().toString() + System.currentTimeMillis() + "";
-
-        Map<String, String> payload = beginProcessing(uuid, at, endpoint);
-
-        return new ResponseEntity<Map<?, ?>>(payload, HttpStatus.OK);
-    }
-
-    private Map<String, String> beginProcessing(final String batchId,
-                                                final String accessToken,
-                                                final String apiEndpoint) {
         final Map<String, String> stringStringMap = new HashMap<>();
-        stringStringMap.put("batchId", batchId);
-        stringStringMap.put("accessToken", accessToken);
-        stringStringMap.put("apiEndpoint", apiEndpoint);
+        stringStringMap.put("batchId", uuid);
+        stringStringMap.put("accessToken", at);
+        stringStringMap.put("apiEndpoint", endpoint);
         Object msg = rabbitTemplate.convertSendAndReceive(this.requests.getName(),
-                (Object) batchId,
+                (Object) uuid,
                 new MessagePostProcessor() {
                     @Override
                     public Message postProcessMessage(Message message) throws AmqpException {
                         MessageProperties messageProperties = message.getMessageProperties();
-                        for (String h : stringStringMap.keySet())
+                        for (String h : stringStringMap.keySet()) {
                             messageProperties.setHeader(h, stringStringMap.get(h));
-//                        messageProperties.setCorrelationId(batchId.getBytes());
-//                        messageProperties.setReplyTo( );
+                        }
+                        // messageProperties.setCorrelationId(batchId.getBytes());
+                        // messageProperties.setReplyTo( );
                         return message;
                     }
                 });
 
-        System.out.println(null == msg ? "" : msg.toString());
-
-
-        return stringStringMap;
+        String confirm = null == msg ? "" : new String((byte[]) msg);
+        System.out.println("Received confirmation of the job: " + confirm);
+        Map<String, String> payload = stringStringMap;
+        return new ResponseEntity<Map<?, ?>>(payload, HttpStatus.OK);
     }
+
 }
 
 @Controller
