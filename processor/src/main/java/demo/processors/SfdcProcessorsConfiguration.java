@@ -44,11 +44,19 @@ class SfdcProcessorsConfiguration {
     }
 
     @Bean
-    SimpleMessageListenerContainer serviceListenerContainer(  final BatchProcessor [] bp, final JdbcTemplate jdbcTemplate, ConnectionFactory rabbitConnectionFactory) {
+    SimpleMessageListenerContainer serviceListenerContainer(
+            SfdcContactProcessor contactProcessor,
+            SfdcContactGeolocationProcessor sfdcContactGeolocationProcessor,
+            SfdcLeadProcessor leadProcessor,
+            SfdcLeadGeolocationProcessor sfdcLeadGeolocationProcessor,
+            JdbcTemplate jdbcTemplate, ConnectionFactory rabbitConnectionFactory) {
+
         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
+     // todo restore all processors
+        PojoListener pojoListener = new PojoListener( jdbcTemplate, new BatchProcessor[]{ leadProcessor , sfdcLeadGeolocationProcessor} );
+        container.setMessageListener(new MessageListenerAdapter(pojoListener, new NoOpSimpleMessageConverter()));
         container.setConnectionFactory(rabbitConnectionFactory);
         container.setQueues(requestQueue());
-        container.setMessageListener(new MessageListenerAdapter(new PojoListener(jdbcTemplate, bp ), new NoOpSimpleMessageConverter()));
         return container;
     }
 
@@ -89,9 +97,9 @@ class SfdcProcessorsConfiguration {
         private JdbcTemplate jdbcTemplate;
         private BatchProcessor[] batchProcessors;
 
-        public PojoListener(JdbcTemplate jdbcTemplate, BatchProcessor[] bps) {
+        public PojoListener(JdbcTemplate jdbcTemplate, BatchProcessor[] batchProcessors) {
             this.jdbcTemplate = jdbcTemplate;
-            this.batchProcessors = bps;
+            this.batchProcessors = batchProcessors;
         }
 
         public String handleMessage(Message msg) throws Exception {
@@ -100,8 +108,8 @@ class SfdcProcessorsConfiguration {
             jdbcTemplate.update("insert into sfdc_batch(batch_id, api_endpoint, access_token) values(?,?,?)",
                     h.get("batchId"), h.get("apiEndpoint"), h.get("accessToken"));
 
-            for (BatchProcessor bp : this.batchProcessors)
-                bp.onMessage(msg);
+            for (BatchProcessor batchProcessor : this.batchProcessors)
+                batchProcessor.onMessage(msg);
 
             return (String) h.get("batchId");
         }

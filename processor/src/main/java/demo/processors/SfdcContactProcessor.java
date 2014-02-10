@@ -3,7 +3,6 @@ package demo.processors;
 import com.force.api.ForceApi;
 import com.force.api.QueryResult;
 import demo.SfdcBatchTemplate;
-import org.apache.log4j.Logger;
 import org.springframework.amqp.core.Message;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -28,28 +27,26 @@ class SfdcContactProcessor extends AbstractSfdcBatchProcessor {
     @SuppressWarnings("unchecked")
     @Override
     public void doProcessMessage(String batchId, Message msg) {
-        String q = new String( msg.getBody()) ;
-        if(!StringUtils.hasText( q)){
-          return;
+        String q = new String(msg.getBody());
+        if (!StringUtils.hasText(q)) {
+            return;
         }
-        String query = "  SELECT Email, MailingState, MailingCountry, MailingStreet , MailingPostalCode, Email,  Id, FirstName, LastName FROM contact " ;
-        query  = query  +   " WHERE (Company LIKE '%" + q+
-                "%' or Email LIKE '%@%" + q +
-                "%') and (  City <> '') and (City <>',') and (State <> '') and (Country <> '') " ;
-        QueryResult<Map> res = forceApi.query(
-                 query);
+        String query = "  SELECT Email, MailingState, MailingCountry, MailingCity, MailingStreet , MailingPostalCode, Id,    FirstName, LastName FROM contact "
+                + " WHERE (  Email LIKE '%@%" + q + "%') and (  MailingCity <> '') and (MailingCity <>',') and (MailingState <> '') and (MailingCountry <> '') ";
+        QueryResult<Map> res = forceApi.query(query);
 
         for (Map<String, Object> row : res.getRecords()) {
 
-            String sql =  "INSERT ignore INTO sfdc_contact( email, mailing_state, mailing_country, mailing_street, mailing_postal_code, email, sfdc_id, first_name, last_name) values( ?, ?, ?, ?, ?, ?, ? ,?) ";
+            String sql = "INSERT ignore INTO sfdc_contact(batch_id,  " +
+                    "email, mailing_state, mailing_country,  mailing_city, mailing_street, mailing_postal_code,   sfdc_id,   first_name, last_name ) values( ?, ?, ?, ?, ?, ?, ?, ? ,?) ";
 
-            this.jdbcTemplate.update(sql,
+            this.jdbcTemplate.update(sql, batchId,
                     row.get("Email"),
                     row.get("MailingState"),
                     row.get("MailingCountry"),
+                    row.get("MailingCity"),
                     row.get("MailingStreet"),
                     row.get("MailingPostalCode"),
-                    row.get("Email"),
                     row.get("Id"),
                     row.get("FirstName"),
                     row.get("LastName"));

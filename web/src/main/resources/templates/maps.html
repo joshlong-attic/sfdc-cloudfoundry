@@ -1,7 +1,8 @@
 <!DOCTYPE HTML>
 <html ng-app="sfdc" xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <title>Simple Map</title>
+    <title>Google Force
+    </title>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
     <meta charset="utf-8"/>
     <link href="webjars/bootstrap/3.0.2/css/bootstrap.css" rel="stylesheet"/>
@@ -29,53 +30,70 @@
 
 
     <script language="JavaScript">
-
-
+        <!--
         // setup the map
-        function installMap(pos) {
-            var map = new google.maps.Map(document.getElementById('map-canvas'), {
+        function installMap(point, points) {
 
-                center: pos,
-                zoom: 13,
-                mapTypeId: google.maps.MapTypeId.ROADMAP,
+            var pos = new google.maps.LatLng(point.latitude, point.longitude);
 
-                panControl: true,
-                mapTypeControl: false,
-                panControlOptions: {
-                    position: google.maps.ControlPosition.RIGHT_CENTER
-                },
-                zoomControl: true,
-                zoomControlOptions: {
-                    style: google.maps.ZoomControlStyle.LARGE,
-                    position: google.maps.ControlPosition.RIGHT_CENTER
-                },
-                scaleControl: false,
-                streetViewControl: false,
-                streetViewControlOptions: {
-                    position: google.maps.ControlPosition.RIGHT_CENTER
-                }
+            var map = new google.maps.Map(
+                    document.getElementById('map-canvas'), {
 
-            });
+                        center: pos,
+                        zoom: 13,
+                        mapTypeId: google.maps.MapTypeId.ROADMAP,
 
-            var infowindow = new google.maps.InfoWindow({
+                        panControl: true,
+                        mapTypeControl: false,
+                        panControlOptions: {
+                            position: google.maps.ControlPosition.RIGHT_CENTER
+                        },
+                        zoomControl: true,
+                        zoomControlOptions: {
+                            style: google.maps.ZoomControlStyle.LARGE,
+                            position: google.maps.ControlPosition.RIGHT_CENTER
+                        },
+                        scaleControl: false,
+                        streetViewControl: false,
+                        streetViewControlOptions: {
+                            position: google.maps.ControlPosition.RIGHT_CENTER
+                        }
+                    });
+
+            new google.maps.InfoWindow({
                 map: map,
                 position: pos,
-                content: 'Your Ad here.'
+                content: 'You Are Here'
             });
 
+            if (points && points.length > 0) {
+                for (var i = 0; i < points.length; i++) {
+                    new google.maps.InfoWindow({
+                        map: map,
+                        position: new google.maps.LatLng(points[i].latitude, points[i].longitude),
+                        content: points [i].name
+                    });
+                }
+            }
         }
+
 
         $(function () {
             // show the map with the current browser at the center
             navigator.geolocation.getCurrentPosition(function (position) {
-                var pos = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-                installMap(pos);
+
+                var points = [];
+                points.push({latitude: 37.7820492, longitude: -122.4040513, name: '875 Howard St'});
+                points.push({latitude: 37.7929789, longitude: -122.4212424, name: '94109'});
+                points.push({latitude: 37.7749295, longitude: -122.4194155, name: 'San Francisco, CA'})
+
+                installMap({latitude: position.coords.latitude, longitude: position.coords.longitude}, points);
             });
         });
 
 
         var appName = 'sfdc';
-        var module = angular.module(appName, [ 'ngResource'  ] );
+        var module = angular.module(appName, [ 'ngResource'  ]);
 
         function SfdcController($scope, $http) {
 
@@ -91,6 +109,7 @@
             };
         }
 
+        //-->
     </script>
 
 
@@ -126,8 +145,6 @@
         </table>
 
     </div>
-
-
 
 
 </div>

@@ -1,0 +1,44 @@
+package demo.processors;
+
+import demo.GeolocationService;
+import demo.SfdcBatchTemplate;
+import org.springframework.amqp.core.Message;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Component;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+@Component
+class SfdcContactGeolocationProcessor
+        extends AbstractGeolocationProcessor {
+
+
+    @Autowired
+    public SfdcContactGeolocationProcessor(SfdcBatchTemplate sfdcBatchTemplate, JdbcTemplate jdbcTemplate, GeolocationService geolocationService) {
+        super(sfdcBatchTemplate, jdbcTemplate, geolocationService);
+    }
+
+
+
+    @Override
+    public String selectSql() {
+        return "select * from sfdc_contact  where batch_id = ? " ;
+    }
+
+    @Override
+    public RowMapper<AbstractGeolocationProcessor.Address> addressRowMapper() {
+        return new RowMapper<AbstractGeolocationProcessor.Address>() {
+            @Override
+            public AbstractGeolocationProcessor.Address mapRow(ResultSet resultSet, int i) throws SQLException {
+                return new AbstractGeolocationProcessor.Address(resultSet.getString("street"),
+                        resultSet.getString("city"),
+                        resultSet.getString("state"),
+                        resultSet.getString("postal_code"),
+                        resultSet.getString("country"));
+            }
+        };
+    }
+}

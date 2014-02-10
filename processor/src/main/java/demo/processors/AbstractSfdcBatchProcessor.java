@@ -26,5 +26,5 @@ abstract class AbstractSfdcBatchProcessor implements BatchProcessor {
         });
     }
 
-    public abstract void doProcessMessage(String batchId, Message msg);
+    public abstract void doProcessMessage(String batchId,   Message msg);
 }

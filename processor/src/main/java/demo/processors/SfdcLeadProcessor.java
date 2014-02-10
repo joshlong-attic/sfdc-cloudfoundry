@@ -51,7 +51,7 @@ class SfdcLeadProcessor extends AbstractSfdcBatchProcessor {
 
         String[] sooqlColNames = (" AnnualRevenue,City,Company,ConvertedAccountId,ConvertedContactId,ConvertedDate,ConvertedOpportunityId,Country,CreatedById,CreatedDate, Description,Email,EmailBouncedDate,EmailBouncedReason, " +
                 "FirstName,Id,Industry,IsConverted,IsDeleted,IsUnreadByOwner,Jigsaw,JigsawContactId,LastActivityDate,LastModifiedById,LastModifiedDate,LastName,   LeadSource, " +
-                "MasterRecordId,Name, OwnerId,Phone,PostalCode,  Rating,Salutation, State,Status,Street,SystemModstamp,Title,Website  ").trim().split(",");
+                "MasterRecordId,   OwnerId,Phone,PostalCode,  Rating,Salutation, State,Status,Street,SystemModstamp,Title,Website  ").trim().split(",");
 
         String[] tableColNames = new String[sooqlColNames.length];
 
@@ -60,7 +60,7 @@ class SfdcLeadProcessor extends AbstractSfdcBatchProcessor {
             tableColNames[i] = camelCaseToTableCol(sooqlColNames[i]);
         }
 
-        String qMarks = StringUtils.repeat("?,", tableColNames.length);
+        String qMarks = StringUtils.repeat("?,", 1 +tableColNames.length); //1 more because we have a batch_id column
         qMarks = qMarks.substring(0, qMarks.length() - 1);
 
 
@@ -72,10 +72,11 @@ class SfdcLeadProcessor extends AbstractSfdcBatchProcessor {
 
         QueryResult<Map> res = this.forceApi.query(query);
 
-        String toExecute = String.format(" insert into sfdc_lead( %s ) values ( %s )", StringUtils.join(tableColNames, ","), qMarks);
+        String toExecute = String.format(" insert into sfdc_lead( batch_id, %s ) values ( %s )", StringUtils.join(tableColNames, ","), qMarks);
         for (Map<String, Object> row : res.getRecords()) {
 
             this.jdbcTemplate.update(toExecute,
+                    batchId ,
                     row.get("AnnualRevenue"),
                     row.get("City"),
                     row.get("Company"),
@@ -90,7 +91,7 @@ class SfdcLeadProcessor extends AbstractSfdcBatchProcessor {
                     row.get("Email"),
                     sfdcRestUtils.parseDate(row.get("EmailBouncedDate")),
                     row.get("EmailBouncedReason"),
-                 //   row.get("Fax"),
+                //  row.get("Fax"),
                     row.get("FirstName"),
                     row.get("Id"),
                     row.get("Industry"),
@@ -105,9 +106,9 @@ class SfdcLeadProcessor extends AbstractSfdcBatchProcessor {
                     row.get("LastName"),
                     row.get("LeadSource"),
                     row.get("MasterRecordId"),
-                   // row.get("MobilePhone"),
-                    row.get("Name"),
-                //    row.get("NumberOfEmployees"),
+                //  row.get("MobilePhone"),
+                //  row.get("Name"),
+                //  row.get("NumberOfEmployees"),
                     row.get("OwnerId"),
                     row.get("Phone"),
                     row.get("PostalCode"),
