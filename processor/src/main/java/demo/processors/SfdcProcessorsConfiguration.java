@@ -44,11 +44,11 @@ class SfdcProcessorsConfiguration {
     }
 
     @Bean
-    SimpleMessageListenerContainer serviceListenerContainer(final JdbcTemplate jdbcTemplate, ConnectionFactory rabbitConnectionFactory) {
+    SimpleMessageListenerContainer serviceListenerContainer(  final BatchProcessor [] bp, final JdbcTemplate jdbcTemplate, ConnectionFactory rabbitConnectionFactory) {
         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
         container.setConnectionFactory(rabbitConnectionFactory);
         container.setQueues(requestQueue());
-        container.setMessageListener(new MessageListenerAdapter(new PojoListener(jdbcTemplate), new NoOpSimpleMessageConverter()));
+        container.setMessageListener(new MessageListenerAdapter(new PojoListener(jdbcTemplate, bp ), new NoOpSimpleMessageConverter()));
         return container;
     }
 
@@ -85,11 +85,13 @@ class SfdcProcessorsConfiguration {
     }
 
     public static class PojoListener {
-        private Log logger = LogFactory.getLog(getClass()) ;
+        private Log logger = LogFactory.getLog(getClass());
         private JdbcTemplate jdbcTemplate;
+        private BatchProcessor[] batchProcessors;
 
-        public PojoListener(JdbcTemplate jdbcTemplate) {
+        public PojoListener(JdbcTemplate jdbcTemplate, BatchProcessor[] bps) {
             this.jdbcTemplate = jdbcTemplate;
+            this.batchProcessors = bps;
         }
 
         public String handleMessage(Message msg) throws Exception {
@@ -97,6 +99,10 @@ class SfdcProcessorsConfiguration {
             jdbcTemplate.execute("delete from sfdc_batch"); //todo delete this cleanup line
             jdbcTemplate.update("insert into sfdc_batch(batch_id, api_endpoint, access_token) values(?,?,?)",
                     h.get("batchId"), h.get("apiEndpoint"), h.get("accessToken"));
+
+            for (BatchProcessor bp : this.batchProcessors)
+                bp.onMessage(msg);
+
             return (String) h.get("batchId");
         }
     }

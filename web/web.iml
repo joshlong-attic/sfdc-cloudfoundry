@@ -11,6 +11,8 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Maven: org.webjars:sockjs-client:0.3.4" level="project" />
+    <orderEntry type="library" name="Maven: org.webjars:bootstrap:3.0.2" level="project" />
     <orderEntry type="library" name="Maven: org.webjars:jquery:2.0.3-1" level="project" />
     <orderEntry type="library" name="Maven: org.webjars:angularjs:1.2.11" level="project" />
     <orderEntry type="library" name="Maven: com.force.sdk:force-oauth:22.0.8-BETA" level="project" />
@@ -67,6 +69,8 @@
     <orderEntry type="library" name="Maven: org.springframework:spring-websocket:4.0.1.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: org.apache.tomcat.embed:tomcat-embed-core:7.0.47" level="project" />
     <orderEntry type="library" name="Maven: org.apache.tomcat.embed:tomcat-embed-logging-juli:7.0.47" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-messaging:4.0.1.RELEASE" level="project" />
+    <orderEntry type="library" name="Maven: org.webjars:stomp-websocket:2.3.0" level="project" />
     <orderEntry type="library" name="Maven: org.thymeleaf:thymeleaf-spring4:2.1.2.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: org.thymeleaf:thymeleaf:2.1.2.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: ognl:ognl:3.0.6" level="project" />

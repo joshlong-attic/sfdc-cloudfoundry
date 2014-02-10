@@ -1,0 +1,88 @@
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Simple Map</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
+    <meta charset="utf-8"/>
+    <link href="webjars/bootstrap/3.0.2/css/bootstrap.css" rel="stylesheet"/>
+    <style>
+        html, body, #map-canvas {
+            height: 100%;
+            margin: 0px;
+            padding: 0px;
+            z-index: -10;
+        }
+    </style>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&amp;sensor=false"></script>
+
+
+    <script src="webjars/jquery/2.0.3/jquery.js"></script>
+    <script src="webjars/bootstrap/3.0.2/js/bootstrap.js"></script>
+    <script src="webjars/stomp-websocket/2.3.0/stomp.js"></script>
+    <script src="webjars/sockjs-client/0.3.4/sockjs.js"></script>
+    <script src="webjars/angularjs/1.2.11/angular.js"></script>
+    <script src="webjars/angularjs/1.2.11/angular-resource.js"></script>
+
+
+    <script language="JavaScript">
+
+
+        // setup the map
+        function installMap(pos) {
+            var map = new google.maps.Map(document.getElementById('map-canvas'), {
+
+                center: pos,
+                zoom: 13,
+                mapTypeId: google.maps.MapTypeId.ROADMAP,
+
+                panControl: true,
+                mapTypeControl: false,
+                panControlOptions: {
+                    position: google.maps.ControlPosition.RIGHT_CENTER
+                },
+                zoomControl: true,
+                zoomControlOptions: {
+                    style: google.maps.ZoomControlStyle.LARGE,
+                    position: google.maps.ControlPosition.RIGHT_CENTER
+                },
+                scaleControl: false,
+                streetViewControl: false,
+                streetViewControlOptions: {
+                    position: google.maps.ControlPosition.RIGHT_CENTER
+                }
+
+            });
+
+            var infowindow = new google.maps.InfoWindow({
+                map: map,
+                position: pos,
+                content: 'Your Ad here.'
+            });
+
+        }
+
+        $(function () {
+            // show the map with the current browser at the center
+            navigator.geolocation.getCurrentPosition(function (position) {
+                var pos = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+                installMap(pos);
+            });
+        });
+
+
+    </script>
+
+
+</head>
+<body>
+
+
+<div style="position: absolute;  ">
+
+    Google Force
+
+</div>
+<div id="map-canvas"></div>
+
+</body>
+</html>

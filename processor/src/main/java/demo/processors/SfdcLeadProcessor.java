@@ -43,10 +43,15 @@ class SfdcLeadProcessor extends AbstractSfdcBatchProcessor {
 
     @Override
     public void doProcessMessage(String batchId, Message msg) {
+        String q = new String( msg.getBody()) ;
 
-        String[] sooqlColNames = (" AnnualRevenue,City,Company,ConvertedAccountId,ConvertedContactId,ConvertedDate,ConvertedOpportunityId,Country,CreatedById,CreatedDate, Description,Email,EmailBouncedDate,EmailBouncedReason,Fax," +
+        if(!org.springframework.util.StringUtils.hasText(q)){
+            return;
+        }
+
+        String[] sooqlColNames = (" AnnualRevenue,City,Company,ConvertedAccountId,ConvertedContactId,ConvertedDate,ConvertedOpportunityId,Country,CreatedById,CreatedDate, Description,Email,EmailBouncedDate,EmailBouncedReason, " +
                 "FirstName,Id,Industry,IsConverted,IsDeleted,IsUnreadByOwner,Jigsaw,JigsawContactId,LastActivityDate,LastModifiedById,LastModifiedDate,LastName,   LeadSource, " +
-                "MasterRecordId,MobilePhone,Name,NumberOfEmployees, OwnerId,Phone,PostalCode,  Rating,Salutation, State,Status,Street,SystemModstamp,Title,Website  ").trim().split(",");
+                "MasterRecordId,Name, OwnerId,Phone,PostalCode,  Rating,Salutation, State,Status,Street,SystemModstamp,Title,Website  ").trim().split(",");
 
         String[] tableColNames = new String[sooqlColNames.length];
 
@@ -58,10 +63,16 @@ class SfdcLeadProcessor extends AbstractSfdcBatchProcessor {
         String qMarks = StringUtils.repeat("?,", tableColNames.length);
         qMarks = qMarks.substring(0, qMarks.length() - 1);
 
+
+        String query = String.format("SELECT %s  FROM Lead ", StringUtils.join(sooqlColNames, ","))
+                 +   " WHERE (Company LIKE '%" + q+
+                "%' or Email LIKE '%@%" + q +
+                "%') and (  City <> '') and (City <>',') and (State <> '') and (Country <> '') "
+                ;
+
+        QueryResult<Map> res = this.forceApi.query(query);
+
         String toExecute = String.format(" insert into sfdc_lead( %s ) values ( %s )", StringUtils.join(tableColNames, ","), qMarks);
-
-        QueryResult<Map> res = this.forceApi.query(String.format("SELECT %s  FROM Lead", StringUtils.join(sooqlColNames, ",")));
-
         for (Map<String, Object> row : res.getRecords()) {
 
             this.jdbcTemplate.update(toExecute,
@@ -79,7 +90,7 @@ class SfdcLeadProcessor extends AbstractSfdcBatchProcessor {
                     row.get("Email"),
                     sfdcRestUtils.parseDate(row.get("EmailBouncedDate")),
                     row.get("EmailBouncedReason"),
-                    row.get("Fax"),
+                 //   row.get("Fax"),
                     row.get("FirstName"),
                     row.get("Id"),
                     row.get("Industry"),
@@ -94,9 +105,9 @@ class SfdcLeadProcessor extends AbstractSfdcBatchProcessor {
                     row.get("LastName"),
                     row.get("LeadSource"),
                     row.get("MasterRecordId"),
-                    row.get("MobilePhone"),
+                   // row.get("MobilePhone"),
                     row.get("Name"),
-                    row.get("NumberOfEmployees"),
+                //    row.get("NumberOfEmployees"),
                     row.get("OwnerId"),
                     row.get("Phone"),
                     row.get("PostalCode"),

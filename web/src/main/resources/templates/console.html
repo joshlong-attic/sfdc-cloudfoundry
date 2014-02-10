@@ -6,58 +6,89 @@
 
     <title>Console</title>
 
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+
+     <link href="webjars/bootstrap/3.0.2/css/bootstrap.css" rel="stylesheet"/>
+    <link href="webjars/bootstrap/3.0.2/css/bootstrap-theme.css" rel="stylesheet"/>
+
+
+    <script src="webjars/jquery/2.0.3/jquery.js"></script>
+    <script src="webjars/bootstrap/3.0.2/js/bootstrap.js"></script>
+
+    <script src="webjars/stomp-websocket/2.3.0/stomp.js"></script>
+    <script src="webjars/sockjs-client/0.3.4/sockjs.js"></script>
     <script src="webjars/angularjs/1.2.11/angular.js"></script>
     <script src="webjars/angularjs/1.2.11/angular-resource.js"></script>
 
-    <script language="JavaScript">
-        var appName = 'sfdc';
-        var module = angular.module(appName, [ 'ngResource' /*, 'ngSanitize', 'ui'*/]);
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDw3QU6p2JPT4VO7zFBGkd3AdnWlld_jVU&amp;sensor=false"></script>
 
+
+
+    <script language="JavaScript">
+
+
+        var appName = 'sfdc';
+
+        var module = angular.module(appName, [ 'ngResource'  ] );
 
         function SfdcController($scope, $http) {
+
+            $scope.query = 'josh';
 
             $http.get('/user').success(function (data) {
                 $scope.user = data;
             });
-
             $scope.process = function () {
-                $http.post('/process').success(function (data) {
+                $http.post('/process', $scope.query).success(function (data) {
                     $scope.batchData = data;
                 });
             };
-
         }
+
     </script>
 </head>
-<body>
-<h1> SFDC Lead Enricher
-</h1>
+<body onload="initMaps()">
 
-<div ng-controller="SfdcController">
+<div class="container">
 
-    <div id="status">
+    <h1> Google Force
+    </h1>
 
-        <div>Welcome <b>{{user.username}}</b>!</div>
+    <div ng-controller="SfdcController">
 
-        <div><a ng-click="process()" href=""> Click here to launch a synchronization process for your account. </a>
+        <div id="status">
+
+            <div>Welcome <b>{{user.username}}</b>!</div>
+
+            <div>
+                <form name="searchForm">
+                    <input type="text" class="search" name="query" ng-model="query"/>
+                    <a ng-click="process()" href="">Search</a>
+                </form>
+            </div>
+            <br/>
+            <table>
+                <tr>
+                    <td style="color: lightgrey">Batch ID</td>
+                    <td>{{batchData.batchId}}</td>
+                </tr>
+                <tr>
+                    <td style="color: lightgrey">Access Token</td>
+                    <td> {{batchData.accessToken}}</td>
+                </tr>
+                <tr>
+                    <td style="color: lightgrey">API Endpoint</td>
+                    <td> {{batchData.apiEndpoint}}</td>
+                </tr>
+            </table>
+
         </div>
-        <br/>
-        <table>
-            <tr>
-                <td style="color: lightgrey">Batch ID</td>
-                <td>{{batchData.batchId}}</td>
-            </tr>
-            <tr>
-                <td style="color: lightgrey">Access Token</td>
-                <td> {{batchData.accessToken}}</td>
-            </tr>
-            <tr>
-                <td style="color: lightgrey">API Endpoint</td>
-                <td> {{batchData.apiEndpoint}}</td>
-            </tr>
-        </table>
+
+
+
 
     </div>
+
 
 
 </div>

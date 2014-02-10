@@ -27,8 +27,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -99,7 +102,7 @@ class RabbitConfiguration {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setExchange(exchange().getName());
         template.setRoutingKey(this.routingKey);
-        template.setReplyTimeout(  1000 * 30 );
+        template.setReplyTimeout(1000 * 30);
         template.setReplyQueue(replyQueue());
         return template;
     }
@@ -142,6 +145,34 @@ class RabbitConfiguration {
 
 }
 
+class Greeting {
+    String text;
+
+    Greeting() {
+    }
+
+    Greeting(String text) {
+        this.text = text;
+    }
+
+    public String getText() {
+        return text;
+    }
+}
+
+@Controller
+class WebSocketController {
+
+    @MessageMapping("/hello")
+    @SendTo("/topic/greetings")
+    public Greeting greeting(Greeting message) throws Exception {
+        Thread.sleep(3000); // simulated delay
+        return new Greeting("Hello, " + message.getText() + "!");
+    }
+
+}
+
+
 @RestController
 class SfdcRestController {
 
@@ -162,39 +193,39 @@ class SfdcRestController {
     }
 
     @RequestMapping(value = "/process", method = RequestMethod.POST)
-    ResponseEntity<Map<?, ?>> process(OAuthAuthenticationToken t) {
+    ResponseEntity<Map<?, ?>> process(OAuthAuthenticationToken t, @RequestBody String query) {
         logger.debug("the principal is " + t.getName());
 
         SecurityContext securityContext = ForceSecurityContextHolder.get();
 
-        String at = securityContext.getSessionId();
+        String accessToken = securityContext.getSessionId();
         String endpoint = securityContext.getEndPointHost();
         String uuid = UUID.randomUUID().toString() + System.currentTimeMillis() + "";
 
         final Map<String, String> stringStringMap = new HashMap<>();
         stringStringMap.put("batchId", uuid);
-        stringStringMap.put("accessToken", at);
+        stringStringMap.put("accessToken", accessToken);
         stringStringMap.put("apiEndpoint", endpoint);
+        stringStringMap.put("query", query);
 
-        Object msg = this.rabbitTemplate.convertSendAndReceive((Object) uuid, new MessagePostProcessor() {
-                    @Override
-                    public Message postProcessMessage(Message message) throws AmqpException {
-                        for (String h : stringStringMap.keySet()) {
-                            message.getMessageProperties().setHeader(h, stringStringMap.get(h));
-                        }
-                        return message;
-                    }
-                });
+        String batchId = (String) this.rabbitTemplate.convertSendAndReceive(
+                (Object) query, new MessagePostProcessor() {
+            @Override
+            public Message postProcessMessage(Message message) throws AmqpException {
+                for (String h : stringStringMap.keySet()) {
+                    message.getMessageProperties().setHeader(h, stringStringMap.get(h));
+                }
+                return message;
+            }
+        });
 
-        if (msg == null) {
-            System.out.println("null");
-        } else if (msg instanceof byte[]) {
-            System.out.println(new String((byte[]) msg));
-        } else {
-            System.out.println(msg.toString());
-        }
+        log("received batchId: " + batchId);
 
         return new ResponseEntity<Map<?, ?>>(stringStringMap, HttpStatus.OK);
+    }
+
+    protected void log(String msg, Object... args) {
+        System.out.println(String.format(msg, args));
     }
 
 }
@@ -209,6 +240,6 @@ class SfdcMvcController {
     String contacts(Model model) {
         Identity identity = this.forceApi.getIdentity();
         model.addAttribute("id", identity.getId());
-        return "console";
+        return "maps";
     }
 }
