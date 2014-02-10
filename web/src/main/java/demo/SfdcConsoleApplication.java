@@ -27,16 +27,18 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Controller;
+import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.Assert;
+import org.springframework.web.bind.annotation.*;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -102,7 +104,7 @@ class RabbitConfiguration {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setExchange(exchange().getName());
         template.setRoutingKey(this.routingKey);
-        template.setReplyTimeout(1000 * 30);
+        template.setReplyTimeout(-1); // this means that it should wait forever for a reply. TODO is this too dangerous ?
         template.setReplyQueue(replyQueue());
         return template;
     }
@@ -145,6 +147,93 @@ class RabbitConfiguration {
 
 }
 
+/**
+ * Meant to represent a record from SFDC (e.g., a contact or a lead)
+ */
+class SfdcPerson {
+    private String street, email, city, state, postalCode, batchId, recordType;
+    private double latitude, longitude;
+
+    public SfdcPerson(String street, String email, String city, String state, String postalCode, String batchId, String recordType, double latitude, double longitude) {
+        this.street = street;
+        this.email = email;
+        this.city = city;
+        this.state = state;
+        this.postalCode = postalCode;
+        this.batchId = batchId;
+        this.latitude = latitude;
+        this.longitude = longitude;
+
+        Assert.hasText(recordType);
+        this.recordType = this.recordType.toLowerCase();
+
+        Assert.isTrue(this.recordType.equalsIgnoreCase("lead") ||
+                this.recordType.equalsIgnoreCase("contact"));
+    }
+
+    public String getStreet() {
+        return street;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public String getPostalCode() {
+        return postalCode;
+    }
+
+    public String getBatchId() {
+        return batchId;
+    }
+
+    public String getRecordType() {
+        return recordType;
+    }
+
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
+}
+
+@Service
+class SfdcPeopleService {
+
+    @Autowired
+    JdbcTemplate jdbcTemplate;
+
+    private RowMapper<SfdcPerson> sfdcPersonRowMapper = new RowMapper<SfdcPerson>() {
+        @Override
+        public SfdcPerson mapRow(ResultSet rs, int rowNum) throws SQLException {
+            return new SfdcPerson(rs.getString("street"), rs.getString("email"), rs.getString("city"), rs.getString("state"),
+                    rs.getString("postcal_code"), rs.getString("batch_id"), rs.getString("record_type"), rs.getDouble("latitude"), rs.getDouble("longitude"));
+        }
+    };
+
+    List<SfdcPerson> results(String batchId) {
+        return this.jdbcTemplate.query("select * from sfdc_directory where batch_id = ?", this.sfdcPersonRowMapper, batchId);
+    }
+
+    List<SfdcPerson> geolocated(String batchId) {
+        return this.jdbcTemplate.query("select * from sfdc_directory where latitude is not null and longitude is not null and batch_id = ? ", this.sfdcPersonRowMapper, batchId);
+    }
+
+}
+
+/*
+// todo consider using websockets
 class Greeting {
     String text;
 
@@ -170,7 +259,7 @@ class WebSocketController {
         return new Greeting("Hello, " + message.getText() + "!");
     }
 
-}
+}*/
 
 
 @RestController
@@ -185,7 +274,10 @@ class SfdcRestController {
     @Autowired
     ForceApi forceApi;
 
-    private Logger logger = Logger.getLogger(getClass());
+    Logger logger = Logger.getLogger(getClass());
+
+    @Autowired
+    SfdcPeopleService sfdcPeopleService;
 
     @RequestMapping(value = "/user", method = RequestMethod.GET)
     Identity user() {
@@ -218,10 +310,18 @@ class SfdcRestController {
                 return message;
             }
         });
+        // the client will know to update the results page once this REST endpoint returns.
+        // todo could we refactor this so that client is notified of the updated state by a websocket? \
+        // todo could we maybe refactor this to use async servlets?
 
         log("received batchId: " + batchId);
 
         return new ResponseEntity<Map<?, ?>>(stringStringMap, HttpStatus.OK);
+    }
+
+    @RequestMapping("/results/{batchId}")
+    List<SfdcPerson> results(@PathVariable String batchId) {
+        return this.sfdcPeopleService.results(batchId);
     }
 
     protected void log(String msg, Object... args) {

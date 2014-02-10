@@ -75,7 +75,7 @@ class SfdcProcessorsConfiguration {
             public Object invoke(MethodInvocation invocation) throws Throwable {
                 String batchId = sfdcBatchTemplate.requiredCurrentBatchId();
                 Map<String, Object> row = jdbcTemplate.queryForMap(
-                        "select * from sfdc_batch where batch_id = ? limit 1", batchId);
+                    "select * from sfdc_batch where batch_id = ? limit 1", batchId);
                 ApiSession session = new ApiSession();
                 session.setAccessToken((String) row.get("access_token"));
                 session.setApiEndpoint((String) row.get("api_endpoint"));

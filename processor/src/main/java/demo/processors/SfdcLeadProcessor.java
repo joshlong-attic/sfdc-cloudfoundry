@@ -51,7 +51,9 @@ class SfdcLeadProcessor extends AbstractSfdcBatchProcessor {
 
         String[] sooqlColNames = ("  AnnualRevenue,City,Company,ConvertedAccountId,ConvertedContactId,ConvertedDate,ConvertedOpportunityId,Country,CreatedById,CreatedDate, Description,Email,EmailBouncedDate,EmailBouncedReason, " +
                 "FirstName,Id,Industry,IsConverted,IsDeleted,IsUnreadByOwner,Jigsaw,JigsawContactId,LastActivityDate,LastModifiedById,LastModifiedDate,LastName,   LeadSource, " +
-                "MasterRecordId,   OwnerId,Phone,PostalCode,  Rating,Salutation, State,Status,Street,SystemModstamp,Title,Website  ").trim().split(",");
+                "MasterRecordId,   OwnerId,Phone,PostalCode,  Rating,Salutation, State,Status,Street,SystemModstamp,Title,Website  ")
+                .trim()
+                .split(",");
 
         String[] tableColNames = new String[sooqlColNames.length];
 

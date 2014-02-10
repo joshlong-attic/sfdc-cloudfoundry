@@ -18,17 +18,17 @@ public abstract class AbstractGeolocationProcessor
     private GeolocationService geolocationService;
     private JdbcTemplate jdbcTemplate;
 
-    public void persistGelocationResult(ResultSet resultSet, AbstractGeolocationProcessor.Address address, GeolocationService.LatLong latLong) throws SQLException {
-        resultSet.updateDouble("latitude", latLong.getLatitude());
-        resultSet.updateDouble("longitude", latLong.getLongitude());
-        resultSet.updateRow();
-    }
-
     public AbstractGeolocationProcessor(SfdcBatchTemplate sfdcBatchTemplate, JdbcTemplate jdbcTemplate, GeolocationService geolocationService) {
         super(sfdcBatchTemplate);
         this.geolocationService = geolocationService;
         this.jdbcTemplate = jdbcTemplate;
 
+    }
+
+    public void persistGelocationResult(ResultSet resultSet, AbstractGeolocationProcessor.Address address, GeolocationService.LatLong latLong) throws SQLException {
+        resultSet.updateDouble("latitude", latLong.getLatitude());
+        resultSet.updateDouble("longitude", latLong.getLongitude());
+        resultSet.updateRow();
     }
 
     protected GeolocationService getGeolocationService() {
@@ -44,21 +44,20 @@ public abstract class AbstractGeolocationProcessor
         final RowMapper<Address> addressRowMapper = addressRowMapper();
         PreparedStatementCreatorFactory preparedStatementCreatorFactory = new PreparedStatementCreatorFactory(selectSql());
         preparedStatementCreatorFactory.setUpdatableResults(true);
-        preparedStatementCreatorFactory.addParameter( new SqlParameter("batchId", Types.VARCHAR));
+        preparedStatementCreatorFactory.addParameter(new SqlParameter("batchId", Types.VARCHAR));
         PreparedStatementCreator preparedStatementCreator = preparedStatementCreatorFactory.newPreparedStatementCreator(new Object[]{batchId});
-        RowCallbackHandler rowCallbackHandler =
-                new RowCallbackHandler() {
-                    int offset = 0;
+        RowCallbackHandler rowCallbackHandler = new RowCallbackHandler() {
+            int offset = 0;
 
-                    @Override
-                    public void processRow(ResultSet resultSet) throws SQLException {
-                        Address address = addressRowMapper.mapRow(resultSet, offset);
-                        offset += 1;
-                        GeolocationService.LatLong latLong = geocode(address);
-                        if (null != latLong)
-                            persistGelocationResult(resultSet, address, latLong);
-                    }
-                };
+            @Override
+            public void processRow(ResultSet resultSet) throws SQLException {
+                Address address = addressRowMapper.mapRow(resultSet, offset);
+                offset += 1;
+                GeolocationService.LatLong latLong = geocode(address);
+                if (null != latLong)
+                    persistGelocationResult(resultSet, address, latLong);
+            }
+        };
 
         getJdbcTemplate().query(preparedStatementCreator, rowCallbackHandler);
     }
@@ -88,7 +87,10 @@ public abstract class AbstractGeolocationProcessor
 
 
         // what about zipcode ?
-        boolean hasZipCode = !StringUtils.isEmpty(zipcode);
+        boolean hasZipCodeAndCountry = !StringUtils.isEmpty(zipcode) && !StringUtils.isEmpty( country);
+
+        // what about just trying city and country?
+        boolean hasCityAndCountry = !StringUtils.isEmpty( city) && !StringUtils.isEmpty( country) ;
 
         // fall through if its not empty
         boolean hasStreet = !StringUtils.isEmpty(addy);
@@ -101,12 +103,16 @@ public abstract class AbstractGeolocationProcessor
         if (latLong == null && hasCityAndState) {
             latLong = this.geolocationService.geocode(String.format("%s, %s", city, state));
         }
-        if (latLong == null && hasZipCode) {
-            latLong = this.geolocationService.geocode(zipcode + "");
+        if (latLong == null && hasZipCodeAndCountry) {
+            latLong = this.geolocationService.geocode( String.format( "%s, %s",zipcode  , country ) );
         }
-        if( latLong == null && hasStreet){
-            latLong = this.geolocationService.geocode( addy) ;
+        if (latLong == null && hasStreet) {
+            latLong = this.geolocationService.geocode(addy);
         }
+        if(latLong == null && hasCityAndCountry){
+            latLong = this.geolocationService.geocode( String.format( "%s, %s",city,country));
+        }
+
         return latLong;
     }
 

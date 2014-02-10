@@ -21,3 +21,8 @@ create table sfdc_lead(
   email_bounced_reason text,fax text,first_name text,id text,industry text,is_converted text,is_deleted text,is_unread_by_owner text,jigsaw text,jigsaw_contact_id text,
   last_activity_date datetime,last_modified_by_id text,last_modified_date datetime,last_name text,lead_source text,master_record_id text,
   mobile_phone text,number_of_employees text,owner_id text,phone text,postal_code text,rating text,salutation text,state text,status text,street text,system_modstamp text,title text,website text ) ;
+
+
+create view sfdc_directory as select  street as street,  email as email, city as city, state as state ,  postal_code as postal_code,  latitude as latitude, longitude as longitude, _id as sfdc_id, batch_id as batch_id  ,
+    'lead' as record_type  from sfdc_lead  union select   mailing_street as street ,email as email, mailing_city as city, mailing_state as state, mailing_postal_code as postal_code, latitude as latitude, longitude as longitude, _id as sfdc_id, batch_id as batch_id  ,
+     'contact' as record_type from sfdc_contact group by email ;
