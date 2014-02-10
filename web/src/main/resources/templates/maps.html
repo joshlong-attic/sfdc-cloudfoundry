@@ -1,11 +1,15 @@
 <!DOCTYPE HTML>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html ng-app="sfdc" xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <title>Simple Map</title>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
     <meta charset="utf-8"/>
     <link href="webjars/bootstrap/3.0.2/css/bootstrap.css" rel="stylesheet"/>
     <style>
+        #bar {
+            position: absolute;
+        }
+
         html, body, #map-canvas {
             height: 100%;
             margin: 0px;
@@ -70,14 +74,64 @@
         });
 
 
+        var appName = 'sfdc';
+        var module = angular.module(appName, [ 'ngResource'  ] );
+
+        function SfdcController($scope, $http) {
+
+            $scope.query = 'josh';
+
+            $http.get('/user').success(function (data) {
+                $scope.user = data;
+            });
+            $scope.process = function () {
+                $http.post('/process', $scope.query).success(function (data) {
+                    $scope.batchData = data;
+                });
+            };
+        }
+
     </script>
 
 
 </head>
 <body>
 
+<div ng-controller="SfdcController">
 
-<div style="position: absolute;  ">
+    <div id="status">
+
+        <div>Welcome <b>{{user.username}}</b>!</div>
+
+        <div>
+            <form name="searchForm">
+                <input type="text" class="search" name="query" ng-model="query"/>
+                <a ng-click="process()" href="">Search</a>
+            </form>
+        </div>
+        <br/>
+        <table>
+            <tr>
+                <td style="color: lightgrey">Batch ID</td>
+                <td>{{batchData.batchId}}</td>
+            </tr>
+            <tr>
+                <td style="color: lightgrey">Access Token</td>
+                <td> {{batchData.accessToken}}</td>
+            </tr>
+            <tr>
+                <td style="color: lightgrey">API Endpoint</td>
+                <td> {{batchData.apiEndpoint}}</td>
+            </tr>
+        </table>
+
+    </div>
+
+
+
+
+</div>
+<div class="bar">
 
     Google Force
 
