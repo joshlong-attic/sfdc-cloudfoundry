@@ -6,8 +6,7 @@ import org.springframework.amqp.core.Message;
 import java.util.Map;
 
 
-abstract class AbstractSfdcBatchProcessor
-        implements BatchProcessor {
+abstract class AbstractSfdcBatchProcessor implements BatchProcessor {
 
     private SfdcBatchTemplate sfdcBatchTemplate;
 

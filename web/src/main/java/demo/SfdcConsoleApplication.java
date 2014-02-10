@@ -3,7 +3,6 @@ package demo;
 import com.force.api.ApiSession;
 import com.force.api.ForceApi;
 import com.force.api.Identity;
-import com.force.sdk.oauth.ForceUserPrincipal;
 import com.force.sdk.oauth.context.ForceSecurityContextHolder;
 import com.force.sdk.oauth.context.SecurityContext;
 import com.force.sdk.springsecurity.OAuthAuthenticationToken;
@@ -14,11 +13,10 @@ import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
-import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -35,26 +33,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-@Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.TYPE})
-@Retention(RetentionPolicy.RUNTIME)
-@Qualifier
-@interface Request {
-}
-
-@Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.TYPE})
-@Retention(RetentionPolicy.RUNTIME)
-@Qualifier
-@interface Reply {
-}
 
 @ImportResource("/salesforceContext.xml")
 @Configuration
@@ -104,78 +86,64 @@ public class SfdcConsoleApplication {
 @Configuration
 class RabbitConfiguration {
 
+    @Value("${processor.requests}")
+    private String requests = "sfdc_requests";
+
+    @Value("${processor.replies}")
+    private String replies = "sfdc_replies";
+    private String routingKey = "sfdc";
+    private String exchange = "sfdc_exchange";
+
+    @Bean
+    RabbitTemplate fixedReplyQRabbitTemplate(ConnectionFactory connectionFactory) {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setExchange(exchange().getName());
+        template.setRoutingKey(this.routingKey);
+        template.setReplyTimeout(  1000 * 30 );
+        template.setReplyQueue(replyQueue());
+        return template;
+    }
+
+    // this registers the RabbitTemplate as a SMLC so
+    // that it can do the right thing for any replies coming back
+    @Bean
+    SimpleMessageListenerContainer replyListenerContainer(RabbitTemplate rabbitTemplate, ConnectionFactory connectionFactory) {
+        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+        container.setQueues(replyQueue());
+        container.setMessageListener(rabbitTemplate);
+        return container;
+    }
+
+    @Bean
+    DirectExchange exchange() {
+        return new DirectExchange(this.exchange);
+    }
+
+    @Bean
+    Binding binding() {
+        return BindingBuilder.bind(requestQueue()).to(exchange()).with(this.routingKey);
+    }
+
+    @Bean
+    Queue requestQueue() {
+        return new Queue(this.requests);
+    }
+
+    @Bean
+    Queue replyQueue() {
+        return new Queue(this.replies);
+    }
 
     @Bean
     Jackson2JsonMessageConverter jsonMessageConverter() {
         return new Jackson2JsonMessageConverter();
     }
 
-    @Bean
-    RabbitTemplate rabbitTemplate(@Request Queue request, @Reply Queue replyQueue, ConnectionFactory connectionFactory, MessageConverter messageConverter) {
-        RabbitTemplate template = new RabbitTemplate(connectionFactory);
-        template.setMessageConverter(messageConverter);
-      /*  template.setReplyQueue(replyQueue);
-        template.setQueue(request.getName());*/
-        template.setReplyTimeout(30 * 1000);
-        return template;
-    }
-
-    @Bean
-    @Request
-    Queue requests(AmqpAdmin amqpAdmin, @Value("${processor.requests}") String destination) {
-        Queue q = new Queue(destination);
-        amqpAdmin.declareQueue(q);
-        return q;
-    }
-
-    @Bean
-    @Reply
-    Queue replies(AmqpAdmin amqpAdmin, @Value("${processor.replies}") String destination) {
-        Queue q = new Queue(destination);
-        amqpAdmin.declareQueue(q);
-        return q;
-    }
-
-    @Bean
-    @Reply
-    DirectExchange repliesExchange(AmqpAdmin amqpAdmin, @Reply Queue queue) {
-        DirectExchange directExchange = new DirectExchange(queue.getName());
-        amqpAdmin.declareExchange(directExchange);
-        return directExchange;
-    }
-
-    @Bean
-    @Request
-    DirectExchange requestsExchange(AmqpAdmin amqpAdmin, @Request Queue queue) {
-        DirectExchange directExchange = new DirectExchange(queue.getName());
-        amqpAdmin.declareExchange(directExchange);
-        return directExchange;
-    }
-
-    @Bean
-    @Reply
-    Binding replyBinding(@Reply Queue q, @Reply DirectExchange e, @Value("${processor.replies}") String d) {
-        return BindingBuilder
-                .bind(q)
-                .to(e)
-                .with(d);
-    }
-
-    @Bean
-    @Request
-    Binding requestBinding(@Request Queue q, @Request DirectExchange e, @Value("${processor.requests}") String d) {
-        return BindingBuilder
-                .bind(q)
-                .to(e)
-                .with(d);
-    }
-
 }
 
 @RestController
 class SfdcRestController {
-
-    private Logger logger = Logger.getLogger(getClass()) ;
 
     @Value("${processor.requests}")
     String destination;
@@ -186,13 +154,7 @@ class SfdcRestController {
     @Autowired
     ForceApi forceApi;
 
-    @Request
-    @Autowired
-    Queue requests;
-
-    @Reply
-    @Autowired
-    Queue replies;
+    private Logger logger = Logger.getLogger(getClass());
 
     @RequestMapping(value = "/user", method = RequestMethod.GET)
     Identity user() {
@@ -200,37 +162,39 @@ class SfdcRestController {
     }
 
     @RequestMapping(value = "/process", method = RequestMethod.POST)
-    ResponseEntity<Map<?, ?>> process(  OAuthAuthenticationToken t ) {
+    ResponseEntity<Map<?, ?>> process(OAuthAuthenticationToken t) {
+        logger.debug("the principal is " + t.getName());
 
-
-        logger.debug( "the principal is "+ t.getName() );
         SecurityContext securityContext = ForceSecurityContextHolder.get();
+
         String at = securityContext.getSessionId();
         String endpoint = securityContext.getEndPointHost();
         String uuid = UUID.randomUUID().toString() + System.currentTimeMillis() + "";
+
         final Map<String, String> stringStringMap = new HashMap<>();
         stringStringMap.put("batchId", uuid);
         stringStringMap.put("accessToken", at);
         stringStringMap.put("apiEndpoint", endpoint);
-        Object msg = rabbitTemplate.convertSendAndReceive(this.requests.getName(),
-                (Object) uuid,
-                new MessagePostProcessor() {
+
+        Object msg = this.rabbitTemplate.convertSendAndReceive((Object) uuid, new MessagePostProcessor() {
                     @Override
                     public Message postProcessMessage(Message message) throws AmqpException {
-                        MessageProperties messageProperties = message.getMessageProperties();
                         for (String h : stringStringMap.keySet()) {
-                            messageProperties.setHeader(h, stringStringMap.get(h));
+                            message.getMessageProperties().setHeader(h, stringStringMap.get(h));
                         }
-                        // messageProperties.setCorrelationId(batchId.getBytes());
-                        // messageProperties.setReplyTo( );
                         return message;
                     }
                 });
 
-        String confirm = null == msg ? "" : new String((byte[]) msg);
-        System.out.println("Received confirmation of the job: " + confirm);
-        Map<String, String> payload = stringStringMap;
-        return new ResponseEntity<Map<?, ?>>(payload, HttpStatus.OK);
+        if (msg == null) {
+            System.out.println("null");
+        } else if (msg instanceof byte[]) {
+            System.out.println(new String((byte[]) msg));
+        } else {
+            System.out.println(msg.toString());
+        }
+
+        return new ResponseEntity<Map<?, ?>>(stringStringMap, HttpStatus.OK);
     }
 
 }
