@@ -52,8 +52,16 @@ class SfdcProcessorsConfiguration {
             JdbcTemplate jdbcTemplate, ConnectionFactory rabbitConnectionFactory) {
 
         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
-     // todo restore all processors
-        PojoListener pojoListener = new PojoListener( jdbcTemplate, new BatchProcessor[]{ leadProcessor , sfdcLeadGeolocationProcessor} );
+        // todo restore all processors
+        BatchProcessor[] contactProcessors =
+                new BatchProcessor[]{contactProcessor, sfdcContactGeolocationProcessor};
+        BatchProcessor[] leadProcessors =
+                new BatchProcessor[]{leadProcessor, sfdcLeadGeolocationProcessor};
+        BatchProcessor[] allBatchProcessors =
+                new BatchProcessor[]{contactProcessor, sfdcContactGeolocationProcessor, leadProcessor, sfdcLeadGeolocationProcessor};
+
+        PojoListener pojoListener = new PojoListener(jdbcTemplate, allBatchProcessors);
+
         container.setMessageListener(new MessageListenerAdapter(pojoListener, new NoOpSimpleMessageConverter()));
         container.setConnectionFactory(rabbitConnectionFactory);
         container.setQueues(requestQueue());

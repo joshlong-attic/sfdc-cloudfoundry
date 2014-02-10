@@ -25,7 +25,7 @@ class SfdcContactGeolocationProcessor
 
     @Override
     public String selectSql() {
-        return "select * from sfdc_contact  where batch_id = ? " ;
+        return "select * from sfdc_contact where batch_id = ? " ;
     }
 
     @Override
@@ -33,11 +33,12 @@ class SfdcContactGeolocationProcessor
         return new RowMapper<AbstractGeolocationProcessor.Address>() {
             @Override
             public AbstractGeolocationProcessor.Address mapRow(ResultSet resultSet, int i) throws SQLException {
-                return new AbstractGeolocationProcessor.Address(resultSet.getString("street"),
-                        resultSet.getString("city"),
-                        resultSet.getString("state"),
-                        resultSet.getString("postal_code"),
-                        resultSet.getString("country"));
+                return new AbstractGeolocationProcessor.Address(
+                        resultSet.getString("mailing_street"),
+                        resultSet.getString("mailing_city"),
+                        resultSet.getString("mailing_state"),
+                        resultSet.getString("mailing_postal_code"),
+                        resultSet.getString("mailing_country"));
             }
         };
     }

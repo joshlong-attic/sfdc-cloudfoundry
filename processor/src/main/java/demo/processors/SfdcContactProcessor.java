@@ -38,9 +38,10 @@ class SfdcContactProcessor extends AbstractSfdcBatchProcessor {
         for (Map<String, Object> row : res.getRecords()) {
 
             String sql = "INSERT ignore INTO sfdc_contact(batch_id,  " +
-                    "email, mailing_state, mailing_country,  mailing_city, mailing_street, mailing_postal_code,   sfdc_id,   first_name, last_name ) values( ?, ?, ?, ?, ?, ?, ?, ? ,?) ";
+                    "email, mailing_state, mailing_country,  mailing_city, mailing_street, mailing_postal_code,   sfdc_id,   first_name, last_name ) values( ?, ?, ?, ?, ?, ?,?, ?, ? ,?) ";
 
-            this.jdbcTemplate.update(sql, batchId,
+            this.jdbcTemplate.update(sql,
+                    batchId,
                     row.get("Email"),
                     row.get("MailingState"),
                     row.get("MailingCountry"),
