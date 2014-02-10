@@ -1,6 +1,7 @@
 package demo.processors;
 
-import demo.GeolocationService;
+import demo.geocoders.Geocoder;
+import demo.geocoders.GoogleGeocoder;
 import demo.SfdcBatchTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -14,8 +15,8 @@ import java.sql.SQLException;
 class SfdcLeadGeolocationProcessor extends AbstractGeolocationProcessor {
 
     @Autowired
-    public SfdcLeadGeolocationProcessor(SfdcBatchTemplate sfdcBatchTemplate, JdbcTemplate jdbcTemplate, GeolocationService geolocationService) {
-        super(sfdcBatchTemplate, jdbcTemplate, geolocationService);
+    public SfdcLeadGeolocationProcessor(SfdcBatchTemplate sfdcBatchTemplate, JdbcTemplate jdbcTemplate,  Geocoder googleGeocoder) {
+        super(sfdcBatchTemplate, jdbcTemplate, googleGeocoder);
     }
 
 

@@ -165,7 +165,7 @@ class SfdcPerson {
         this.longitude = longitude;
 
         Assert.hasText(recordType);
-        this.recordType = this.recordType.toLowerCase();
+        this.recordType = recordType.toLowerCase();
 
         Assert.isTrue(this.recordType.equalsIgnoreCase("lead") ||
                 this.recordType.equalsIgnoreCase("contact"));
@@ -217,8 +217,18 @@ class SfdcPeopleService {
     private RowMapper<SfdcPerson> sfdcPersonRowMapper = new RowMapper<SfdcPerson>() {
         @Override
         public SfdcPerson mapRow(ResultSet rs, int rowNum) throws SQLException {
-            return new SfdcPerson(rs.getString("street"), rs.getString("email"), rs.getString("city"), rs.getString("state"),
-                    rs.getString("postcal_code"), rs.getString("batch_id"), rs.getString("record_type"), rs.getDouble("latitude"), rs.getDouble("longitude"));
+            String street = rs.getString("street"),
+                    email = rs.getString("email"),
+                    city = rs.getString("city"),
+                    state = rs.getString("state"),
+                    postalCode = rs.getString("postal_code"),
+                    batchId = rs.getString("batch_id"),
+                    recordType = rs.getString("record_type");
+            Object lat = rs.getObject("latitude"),
+                    lon = rs.getObject("longitude");
+            double latitude = lat != null ? (Double) lat : -0,
+                    longitude = lon != null ? (Double) lon : -0;
+            return new SfdcPerson(street, email, city, state, postalCode, batchId, recordType, latitude, longitude);
         }
     };
 

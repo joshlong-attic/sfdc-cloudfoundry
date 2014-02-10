@@ -1,8 +1,8 @@
 package demo.processors;
 
-import demo.GeolocationService;
+import demo.geocoders.Geocoder;
+import demo.geocoders.GoogleGeocoder;
 import demo.SfdcBatchTemplate;
-import org.springframework.amqp.core.Message;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -17,8 +17,8 @@ class SfdcContactGeolocationProcessor
 
 
     @Autowired
-    public SfdcContactGeolocationProcessor(SfdcBatchTemplate sfdcBatchTemplate, JdbcTemplate jdbcTemplate, GeolocationService geolocationService) {
-        super(sfdcBatchTemplate, jdbcTemplate, geolocationService);
+    public SfdcContactGeolocationProcessor(SfdcBatchTemplate sfdcBatchTemplate, JdbcTemplate jdbcTemplate,   Geocoder googleGeocoder) {
+        super(sfdcBatchTemplate, jdbcTemplate, googleGeocoder);
     }
 
 

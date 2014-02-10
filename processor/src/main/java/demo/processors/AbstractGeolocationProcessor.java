@@ -1,6 +1,7 @@
 package demo.processors;
 
-import demo.GeolocationService;
+import demo.geocoders.Geocoder;
+import demo.geocoders.GoogleGeocoder;
 import demo.SfdcBatchTemplate;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.core.Message;
@@ -15,24 +16,24 @@ import java.sql.Types;
 public abstract class AbstractGeolocationProcessor
         extends AbstractSfdcBatchProcessor {
 
-    private GeolocationService geolocationService;
+    private Geocoder googleGeocoder;
     private JdbcTemplate jdbcTemplate;
 
-    public AbstractGeolocationProcessor(SfdcBatchTemplate sfdcBatchTemplate, JdbcTemplate jdbcTemplate, GeolocationService geolocationService) {
+    public AbstractGeolocationProcessor(SfdcBatchTemplate sfdcBatchTemplate, JdbcTemplate jdbcTemplate, Geocoder googleGeocoder) {
         super(sfdcBatchTemplate);
-        this.geolocationService = geolocationService;
+        this.googleGeocoder = googleGeocoder;
         this.jdbcTemplate = jdbcTemplate;
 
     }
 
-    public void persistGelocationResult(ResultSet resultSet, AbstractGeolocationProcessor.Address address, GeolocationService.LatLong latLong) throws SQLException {
+    public void persistGelocationResult(ResultSet resultSet, AbstractGeolocationProcessor.Address address, Geocoder.LatLong latLong) throws SQLException {
         resultSet.updateDouble("latitude", latLong.getLatitude());
         resultSet.updateDouble("longitude", latLong.getLongitude());
         resultSet.updateRow();
     }
 
-    protected GeolocationService getGeolocationService() {
-        return geolocationService;
+    protected Geocoder getGeolocationService() {
+        return googleGeocoder;
     }
 
     protected JdbcTemplate getJdbcTemplate() {
@@ -53,7 +54,7 @@ public abstract class AbstractGeolocationProcessor
             public void processRow(ResultSet resultSet) throws SQLException {
                 Address address = addressRowMapper.mapRow(resultSet, offset);
                 offset += 1;
-                GeolocationService.LatLong latLong = geocode(address);
+                Geocoder.LatLong latLong = geocode(address);
                 if (null != latLong)
                     persistGelocationResult(resultSet, address, latLong);
             }
@@ -66,7 +67,7 @@ public abstract class AbstractGeolocationProcessor
     public abstract String selectSql();
 
 
-    public GeolocationService.LatLong geocode(Address address) {
+    public  Geocoder.LatLong geocode(Address address) {
         Assert.notNull(address, "the provided address can't be null");
 
         String addy = address.getAddress(),
@@ -95,22 +96,22 @@ public abstract class AbstractGeolocationProcessor
         // fall through if its not empty
         boolean hasStreet = !StringUtils.isEmpty(addy);
 
-        GeolocationService.LatLong latLong = null;
+        Geocoder.LatLong latLong = null;
 
         if (hasAllFields) {
-            latLong = this.geolocationService.geocode(String.format("%s, %s, %s, %s", addy, city, state, zipcode));
+            latLong = this.googleGeocoder.geocode(String.format("%s, %s, %s, %s", addy, city, state, zipcode));
         }
         if (latLong == null && hasCityAndState) {
-            latLong = this.geolocationService.geocode(String.format("%s, %s", city, state));
+            latLong = this.googleGeocoder.geocode(String.format("%s, %s", city, state));
         }
         if (latLong == null && hasZipCodeAndCountry) {
-            latLong = this.geolocationService.geocode( String.format( "%s, %s",zipcode  , country ) );
+            latLong = this.googleGeocoder.geocode( String.format( "%s, %s",zipcode  , country ) );
         }
         if (latLong == null && hasStreet) {
-            latLong = this.geolocationService.geocode(addy);
+            latLong = this.googleGeocoder.geocode(addy);
         }
         if(latLong == null && hasCityAndCountry){
-            latLong = this.geolocationService.geocode( String.format( "%s, %s",city,country));
+            latLong = this.googleGeocoder.geocode( String.format( "%s, %s",city,country));
         }
 
         return latLong;
