@@ -12,7 +12,7 @@
             right: 10px;
             top: 10px;
             z-index: 1;
-            width: 300px;
+            width: 400px;
             padding: 10px;
             border: 2px solid lightgrey;
             background-color: white;
@@ -61,6 +61,7 @@
         function SfdcController($scope, $http) {
 
             $scope.query = 'morgan';
+            $scope.results = [];
 
             $http.get('/user').success(function (data) {
                 $scope.user = data;
@@ -76,28 +77,38 @@
                 });
             });
 
-//            $('#console').addClass('console-overlay');
             $('#console').css({'z-index': '100'});
+
+            function renderResults(r) {
+
+                $scope.results = r;
+
+                for (var i = 0; i < $scope.results.length; i++) {
+                    var result = $scope.results[i];
+                    if ((result.latitude != null && result.longitude != null && result.longitude != 0.0 && result.latitude != 0.0)) {
+                        new google.maps.InfoWindow({
+                            map: map,
+                            position: new google.maps.LatLng(result.latitude, result.longitude),
+                            content: result.toString() + ''
+                        });
+                    }
+                }
+            };
 
             $scope.process = function () {
                 $http.post('/process', $scope.query).success(function (data) {
+
                     $scope.batchData = data;
-                    var batchId = $scope.batchData.batchId;
-                    $http.get('/results/' + batchId).success(function (results) {
-                        for (var i = 0; i < results.length; i++) {
-                            var result = results[i];
-                            if ((result.latitude != null && result.longitude != null && result.longitude != 0.0 && result.latitude != 0.0)) {
-                                new google.maps.InfoWindow({
-                                    map: map,
-                                    position: new google.maps.LatLng(result.latitude, result.longitude),
-                                    content: result.toString() + ''
-                                });
-                            }
-                        }
+                    $scope.batchId = $scope.batchData.batchId;
+
+                    $http.get('/results/' + $scope.batchId).success(function (results) {
+                        renderResults(results);
                     });
                 });
             };
         }
+
+
         //]]>
     </script>
 
@@ -105,58 +116,40 @@
 </head>
 <body>
 
-<div id="console">
+<div ng-show="user != null" ng-controller="SfdcController" id="console">
 
 
-    <div ng-controller="SfdcController">
+    <div>Welcome <b>{{user.username}}</b>!</div>
 
-        <div id="status">
+    <br/>
 
-            <div>Welcome <b>{{user.username}}</b>!</div>
+    <form name="searchForm" class="navbar-form" role="search">
+        <div class="input-group">
+            <input type="text"
+                   class="form-control"
+                   placeholder="Search"
+                   name="query"
+                   id="query"
+                   ng-model="query"/>
 
-
-            <br/>
-
-
-            <form name="searchForm" class="navbar-form" role="search">
-                <div class="input-group">
-                    <input type="text"
-                           class="form-control"
-                           placeholder="Search"
-                           name="query"
-                           id="query"
-                           ng-model="query"/>
-
-                    <div class="input-group-btn">
-                        <button class="btn btn-default" ng-click="process()" type="submit"><span
-                                class="glyphicon glyphicon-search"></span></button>
-                    </div>
-                </div>
-            </form>
-
-
-            <div ng-show="results">
-                <table>
-                    <tr>
-                        <td style="color: lightgrey">Batch ID</td>
-                        <td>{{batchData.batchId}}</td>
-                    </tr>
-                    <tr>
-                        <td style="color: lightgrey">Access Token</td>
-                        <td> {{batchData.accessToken}}</td>
-                    </tr>
-                    <tr>
-                        <td style="color: lightgrey">API Endpoint</td>
-                        <td> {{batchData.apiEndpoint}}</td>
-                    </tr>
-                </table>
+            <div class="input-group-btn">
+                <button class="btn btn-default" ng-click="process()" type="submit"><span
+                        class="glyphicon glyphicon-search"></span></button>
             </div>
-
+        </div>
+    </form>
+    <div ng-show="results.length > 0 ">
+        <div id="status" ng-show="batchData.batchId">
+            Displaying {{ results.length }} results
         </div>
 
-
+        <div ng-repeat="r in results">
+            {{ r.firstName }} {{ r.lastName }}
+        </div>
     </div>
+
 </div>
+
 <div id="map-canvas"></div>
 
 </body>

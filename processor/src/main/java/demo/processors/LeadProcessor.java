@@ -183,7 +183,7 @@ public class LeadProcessor extends AbstractBatchProcessor {
             inClause.add(String.format("'%s'", x));
         }
         String insertTheRest = String.format(
-                "insert ignore into sfdc_batch_lead ( batch_id, lead_id) select ?, " +
+                "insert  into sfdc_batch_lead ( batch_id, lead_id) select ?, " +
                         " sl._id from sfdc_lead sl where sl.sfdc_id IN ( %s )", StringUtils.join(inClause, ","));
         if (sfdcIdsToAssignToBatch.size() > 0) {
             int restOfUpdatedRows = jdbcTemplate.update(insertTheRest, batchId);

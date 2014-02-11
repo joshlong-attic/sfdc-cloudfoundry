@@ -91,12 +91,12 @@ CREATE VIEW sfdc_directory AS
     bl._id      AS sfdc_id,
     batch_id    AS batch_id,
     'lead'      AS record_type
-  FROM sfdc_lead sl
-    LEFT JOIN
+  FROM
     sfdc_batch_lead bl
+    LEFT JOIN
+    sfdc_lead sl
       ON
-        bl.lead_id = sl._id
-  GROUP BY email;
+        bl.lead_id = sl._id;
 
 
 /* UNION
