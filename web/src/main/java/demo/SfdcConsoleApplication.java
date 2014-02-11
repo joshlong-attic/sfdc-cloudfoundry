@@ -214,7 +214,7 @@ class SfdcPeopleService {
     @Autowired
     JdbcTemplate jdbcTemplate;
 
-    private RowMapper<SfdcPerson> sfdcPersonRowMapper = new RowMapper<SfdcPerson>() {
+    RowMapper<SfdcPerson> sfdcPersonRowMapper = new RowMapper<SfdcPerson>() {
         @Override
         public SfdcPerson mapRow(ResultSet rs, int rowNum) throws SQLException {
             String street = rs.getString("street"),
@@ -241,36 +241,6 @@ class SfdcPeopleService {
     }
 
 }
-
-/*
-// todo consider using websockets
-class Greeting {
-    String text;
-
-    Greeting() {
-    }
-
-    Greeting(String text) {
-        this.text = text;
-    }
-
-    public String getText() {
-        return text;
-    }
-}
-
-@Controller
-class WebSocketController {
-
-    @MessageMapping("/hello")
-    @SendTo("/topic/greetings")
-    public Greeting greeting(Greeting message) throws Exception {
-        Thread.sleep(3000); // simulated delay
-        return new Greeting("Hello, " + message.getText() + "!");
-    }
-
-}*/
-
 
 @RestController
 class SfdcRestController {

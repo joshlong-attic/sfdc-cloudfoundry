@@ -19,9 +19,34 @@ import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import javax.sql.DataSource;
 import java.util.Map;
+
+
+/**
+ * this should work inside of cloud foundry
+ */
+@Configuration
+@Profile("cloud")
+class CloudFoundryProcesssorsConfiguration {
+
+
+    @Bean
+    DataSource dataSource() {
+        return null;
+    }
+
+    @Bean
+    ConnectionFactory connectionFactory() {
+        return null;
+    }
+
+
+}
+
 
 @Configuration
 class SfdcProcessorsConfiguration {
@@ -75,7 +100,7 @@ class SfdcProcessorsConfiguration {
             public Object invoke(MethodInvocation invocation) throws Throwable {
                 String batchId = sfdcBatchTemplate.requiredCurrentBatchId();
                 Map<String, Object> row = jdbcTemplate.queryForMap(
-                    "select * from sfdc_batch where batch_id = ? limit 1", batchId);
+                        "select * from sfdc_batch where batch_id = ? limit 1", batchId);
                 ApiSession session = new ApiSession();
                 session.setAccessToken((String) row.get("access_token"));
                 session.setApiEndpoint((String) row.get("api_endpoint"));
