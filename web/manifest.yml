@@ -1,0 +1,21 @@
+---
+applications:
+- name: web
+  memory: 256M
+  instances: 1
+  host: weboflies
+  domain: cfapps.io
+  path: target/web-0.0.1-SNAPSHOT.jar
+  services:
+    sfdc-mysql:
+      label: cleardb
+      provider: cleardb
+      version: n/a
+      plan: spark
+    sfdc-rabbitmq:
+      label: cloudamqp
+      provider: cloudamqp
+      version: n/a
+      plan: lemur
+env:
+    SPRING_PROFILES_ACTIVE: cloud
