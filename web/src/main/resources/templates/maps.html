@@ -1,145 +1,230 @@
 <!DOCTYPE HTML>
 <html ng-app="sfdc" xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <title>Google Force
-    </title>
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
-    <meta charset="utf-8"/>
-    <link href="webjars/bootstrap/3.0.2/css/bootstrap.css" rel="stylesheet"/>
-    <style>
-        #console {
-            position: fixed;
-            right: 20px;
-            top: 20px;
-            z-index: 1;
-            width: 400px;
-            padding: 10px;
-            border: 2px solid lightgrey;
-            background-color: white;
-            overflow-y: scroll;
-            bottom: 20px;
-        }
+<title>Google Force
+</title>
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
+<meta charset="utf-8"/>
+<link href="webjars/bootstrap/3.0.2/css/bootstrap.css" rel="stylesheet"/>
+<style>
+    #console {
+        position: fixed;
+        right: 20px;
+        top: 20px;
+        z-index: 1;
+        width: 400px;
+        padding: 10px;
+        border: 2px solid lightgrey;
+        background-color: white;
+        overflow-y: scroll;
+        bottom: 20px;
+    }
 
-        html, body {
-            height: 100%;
-            margin: 0px;
-            padding: 0px;
-        }
+    html, body {
+        height: 100%;
+        margin: 0px;
+        padding: 0px;
+    }
 
-        #map-canvas {
-            position: absolute;
-            top: 0px;
-            left: 0px;
-            height: 100%;
-            margin: 0px;
-            width: 100%;
-            z-index: 2;
-            padding: 0px;
-        }
+    #map-canvas {
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        height: 100%;
+        margin: 0px;
+        width: 100%;
+        z-index: 2;
+        padding: 0px;
+    }
 
-        .results-container {
-            margin-top: 30px;
-            margin-left: 30px;
-        }
+    .results-container {
+        margin-top: 30px;
+        margin-left: 30px;
+    }
 
-        #status {
-            margin-top: 10px;
-            margin-bottom: 10px;
-        }
-
-
-    </style>
-    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&amp;sensor=false"></script>
+    #status {
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
 
 
-    <script src="webjars/jquery/2.0.3/jquery.js"></script>
-    <script src="webjars/bootstrap/3.0.2/js/bootstrap.js"></script>
-    <script src="webjars/stomp-websocket/2.3.0/stomp.js"></script>
-    <script src="webjars/sockjs-client/0.3.4/sockjs.js"></script>
-    <script src="webjars/angularjs/1.2.11/angular.js"></script>
-    <script src="webjars/angularjs/1.2.11/angular-resource.js"></script>
+</style>
+<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&amp;sensor=false"></script>
 
 
-    <script language="JavaScript">
-        //<![CDATA[
-
-        ///
-        /// globals
-        ///
-        var map;
-        var appName = 'sfdc';
-        var module = angular.module(appName, [ 'ngResource'  ]);
-
-        function SfdcController($scope, $http) {
-
-            $scope.query = 'morgan';
-            $scope.results = [];
-
-            $http.get('/user').success(function (data) {
-                $scope.user = data;
-            });
-
-            var toLatLng = function (p) {
-                var p = new google.maps.LatLng(p['coords']['latitude'], p['coords']['longitude']);
-                return p;
-            }
-
-            navigator.geolocation.getCurrentPosition(function (position) {
+<script src="webjars/jquery/2.0.3/jquery.js"></script>
+<script src="webjars/bootstrap/3.0.2/js/bootstrap.js"></script>
+<script src="webjars/stomp-websocket/2.3.0/stomp.js"></script>
+<script src="webjars/sockjs-client/0.3.4/sockjs.js"></script>
+<script src="webjars/angularjs/1.2.11/angular.js"></script>
+<script src="webjars/angularjs/1.2.11/angular-resource.js"></script>
 
 
-                var pos = toLatLng(position); //new google.maps.LatLng({latitude: position.coords.latitude, longitude: position.coords.longitude}.latitude, {latitude: position.coords.latitude, longitude: position.coords.longitude}.longitude);
+<script language="JavaScript">
+    //<![CDATA[
 
+    ///
+    /// globals
+    ///
+    var map;
+    var appName = 'sfdc';
+    var module = angular.module(appName, [ 'ngResource'  ]);
 
-                map = new google.maps.Map(document.getElementById('map-canvas'), { mapTypeControl: false, center: pos, zoom: 13  });
-                new google.maps.InfoWindow({
-                    map: map,
-                    position: pos,
-                    content: 'You Are Here.'
-                });
-            });
+    function SfdcController($scope, $http) {
 
-            $('#console').css({'z-index': '100'});
+        $scope.query = 'morgan';
+        $scope.results = [];
 
-            function renderResults(r) {
+        $http.get('/user').success(function (data) {
+            $scope.user = data;
+        });
 
-                $scope.results = r;
+        var toLatLng = function (p) {
+            return new google.maps.LatLng(p['coords']['latitude'], p['coords']['longitude']);
+        };
 
-                for (var i = 0; i < $scope.results.length; i++) {
-                    var result = $scope.results[i];
-                    if ((result.latitude != null && result.longitude != null && result.longitude != 0.0 && result.latitude != 0.0)) {
-                        new google.maps.InfoWindow({
-                            map: map,
-                            position: new google.maps.LatLng(result.latitude, result.longitude),
-                            content: result.toString() + ''
-                        });
-                    }
+        var keyForRecord = function (record) {
+            return record.longitude + ':' + record.latitude;
+        };
+
+        var markers = [];
+
+        var renderMap = function () {
+            var results = $scope.results;
+            // first lets get rid of the records that dont lend themselves to being displayed on a map
+            //
+            var x = [];
+            for (var p = 0; p < results.length; p++) {
+                var r = results [p];
+                var dud = function (e) {
+                    return e == null || e == 0.0;
+                };
+                var perfect = !dud(r.latitude) && !dud(r.longitude);
+                if (perfect) {
+                    x.push(r);
                 }
+
+            }
+            $scope.results = x; // filter out the unwanted bits
+
+
+            // lets normalize the records into a map
+            var mapOfPoints = {};
+            jQuery.each($scope.results, function (indx, record) {
+                var k = keyForRecord(record);
+                if (!(k in mapOfPoints)) {
+                    mapOfPoints[k] = [];
+                }
+                mapOfPoints[k].push(record);
+                console.debug('there are ' + mapOfPoints[k].length + ' records associated with the key ' + k)
+            });
+
+
+            // now loop through normalized results and setup markers
+            var contentForInfoPoint = function (records) {
+                var c = '';
+                if (records.length == 1) {
+                    var r = records [0];
+                    c = '<h1>' + $scope.cleanName(r) + '</h1>' + '<P>' + r.email + '</P>';
+                }
+                else {
+                    c = '(' + records.length + ' results)';
+                }
+                return c;
             };
-
-            $scope.cleanName = function (r) {
-                var fn = r.firstName.toLowerCase(),
-                        ln = r.lastName.toLowerCase();
-                fn = (fn.charAt(0) + '').toUpperCase() + fn.substring(1);
-                ln = (ln.charAt(0) + '').toUpperCase() + ln.substring(1);
-                return ln + ', ' + fn;
+            var positionForInfoPoint = function (records) {
+                var latLong = records.length >= 1 ? records[0] : null;
+                console.debug('latLong:' + JSON.stringify(latLong));
+                return new google.maps.LatLng(latLong.latitude, latLong.longitude);
             };
+            jQuery.each(mapOfPoints, function (k, v) {
+                console.debug(k + '=' + v.length);
+                var content = contentForInfoPoint(v)
+                markers.push(new google.maps.Marker({
+                    visible: true,
+                    map: map,
+                    title: content,
+                    position: positionForInfoPoint(v)
+                }));
+                console.debug('adding a marker for ' + content)
 
-            $scope.process = function () {
-                $http.post('/process', $scope.query).success(function (data) {
+            });
 
-                    $scope.batchData = data;
-                    $scope.batchId = $scope.batchData.batchId;
 
-                    $http.get('/results/' + $scope.batchId).success(function (results) {
-                        renderResults(results);
-                    });
+        };
+
+        var renderResults = function (results) {
+
+            // clear existing info points if any
+            jQuery.each(markers, function (i, ip) {
+                ip.setMap(null);
+            });
+
+            $scope.results = results;
+
+            renderMap();
+
+//                var marker = new google.maps.Marker({
+//                    position: myLatlng,
+//                    map: map,
+//                    title: 'Uluru (Ayers Rock)'
+//                });
+
+            /*
+             for (var i = 0; i < $scope.results.length; i++) {
+             var result = $scope.results[i];
+             if ((result.latitude != null && result.longitude != null && result.longitude != 0.0 && result.latitude != 0.0)) {
+             new google.maps.InfoWindow({
+             map: map,
+             position: new google.maps.LatLng(result.latitude, result.longitude),
+             content: result.toString() + ''
+             });
+             }
+             }
+             */
+        };
+
+        navigator.geolocation.getCurrentPosition(function (position) {
+            var pos = toLatLng(position);
+            map = new google.maps.Map(document.getElementById('map-canvas'), { mapTypeControl: false, center: pos, zoom: 13  });
+            /*  new google.maps.InfoWindow({
+             map: map,
+             position: pos,
+             content: 'You Are Here.'
+             });*/
+            $('#console').css({'z-index': '100'});
+        });
+
+
+        /// public methods
+
+        $scope.cleanName = function (r) {
+            var fn = r.firstName.toLowerCase(),
+                    ln = r.lastName.toLowerCase();
+            fn = (fn.charAt(0) + '').toUpperCase() + fn.substring(1);
+            ln = (ln.charAt(0) + '').toUpperCase() + ln.substring(1);
+            return ln + ', ' + fn;
+        };
+
+        $scope.process = function () {
+            $http.post('/process', $scope.query).success(function (data) {
+                $scope.batchData = data;
+                $scope.batchId = $scope.batchData.batchId;
+                $http.get('/results/' + $scope.batchId).success(function (results) {
+                    renderResults(results);
                 });
-            };
-        }
+            });
+        };
 
 
-        //]]>
-    </script>
+        //todo remove this later
+        //   $scope.process();
+
+    }
+
+
+    //]]>
+</script>
 
 
 </head>

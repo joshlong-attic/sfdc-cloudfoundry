@@ -11,11 +11,13 @@ import org.springframework.amqp.support.converter.SimpleMessageConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.Map;
 
 
+@Profile("default")
 @Configuration
 class RabbitConfiguration {
 
@@ -38,17 +40,11 @@ class RabbitConfiguration {
 
     @Bean
     SimpleMessageListenerContainer serviceListenerContainer(
-//            ContactProcessor contactProcessor,
-//            ContactGeocodingProcessor contactGeocodingProcessor,
             LeadProcessor leadProcessor,
             LeadGeocodingProcessor leadGeocodingProcessor,
             JdbcTemplate jdbcTemplate, ConnectionFactory rabbitConnectionFactory) {
 
         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
-
-        // todo restore all processors
-        // BatchProcessor[] contactProcessors = new BatchProcessor[]{contactProcessor, contactGeocodingProcessor};
-        // BatchProcessor[] allBatchProcessors = new BatchProcessor[]{contactProcessor, contactGeocodingProcessor, leadProcessor, leadGeocodingProcessor};
 
         BatchProcessor[] leadProcessors = new BatchProcessor[]{leadProcessor, leadGeocodingProcessor};
         PojoListener pojoListener = new PojoListener(jdbcTemplate, leadProcessors);
