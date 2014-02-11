@@ -8,6 +8,8 @@ import com.force.sdk.oauth.context.SecurityContext;
 import com.force.sdk.springsecurity.OAuthAuthenticationToken;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.log4j.Logger;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.core.*;
@@ -21,10 +23,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.SecurityAutoConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.ImportResource;
+import org.springframework.cloud.Cloud;
+import org.springframework.cloud.CloudFactory;
+import org.springframework.cloud.service.ServiceInfo;
+import org.springframework.cloud.service.common.RabbitServiceInfo;
+import org.springframework.cloud.service.common.RelationalServiceInfo;
+import org.springframework.context.annotation.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -35,6 +39,9 @@ import org.springframework.ui.Model;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
 
+
+import javax.annotation.PostConstruct;
+import javax.sql.DataSource;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -42,6 +49,49 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+
+/**
+ * this should work inside of cloud foundry
+ */
+@Configuration
+@Profile("cloud")
+class CloudFoundryConfiguration {
+
+    Log log = LogFactory.getLog(getClass());
+
+    @PostConstruct
+    public void setup(){
+        log.debug(getClass().getName() + " has been loaded!");
+    }
+
+    @Bean
+    DataSource dataSource(Cloud cloud) {
+        List<ServiceInfo> serviceInfos = cloud.getServiceInfos(RelationalServiceInfo.class);
+        Assert.isTrue(serviceInfos.size() > 0);
+        ServiceInfo serviceInfo = serviceInfos.get(0);
+        String serviceId = serviceInfo.getId();
+        return cloud.getServiceConnector(serviceId, DataSource.class, null);
+    }
+
+    @Bean
+    ConnectionFactory connectionFactory(Cloud cloud) {
+        List<ServiceInfo> serviceInfos = cloud.getServiceInfos(RabbitServiceInfo.class);
+        Assert.isTrue(serviceInfos.size() > 0);
+        ServiceInfo serviceInfo = serviceInfos.get(0);
+        String serviceId = serviceInfo.getId();
+        return cloud.getServiceConnector(serviceId, ConnectionFactory.class, null);
+    }
+
+    @Bean
+    CloudFactory cloudFactory() {
+        return new CloudFactory();
+    }
+
+    @Bean
+    Cloud cloud(CloudFactory cloudFactory) {
+        return cloudFactory.getCloud();
+    }
+}
 
 @ImportResource("/salesforceContext.xml")
 @Configuration
@@ -63,6 +113,7 @@ public class SfdcConsoleApplication {
             }
         });
     }
+
 
     @Bean
     ForceApi forceApiProxy() {

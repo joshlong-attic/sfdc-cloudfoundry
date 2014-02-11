@@ -17,12 +17,20 @@ import org.springframework.amqp.support.converter.MessageConversionException;
 import org.springframework.amqp.support.converter.SimpleMessageConverter;
 import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.Cloud;
+import org.springframework.cloud.CloudFactory;
+import org.springframework.cloud.service.ServiceInfo;
+import org.springframework.cloud.service.common.RabbitServiceInfo;
+import org.springframework.cloud.service.common.RelationalServiceInfo;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.util.Assert;
 
+import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
+import java.util.List;
 import java.util.Map;
 
 
@@ -31,20 +39,42 @@ import java.util.Map;
  */
 @Configuration
 @Profile("cloud")
-class CloudFoundryProcesssorsConfiguration {
+class CloudFoundryConfiguration {
 
+    Log log = LogFactory.getLog(getClass());
 
-    @Bean
-    DataSource dataSource() {
-        return null;
+    @PostConstruct
+    public void setup(){
+        log.debug(getClass().getName() + " has been loaded!");
     }
 
     @Bean
-    ConnectionFactory connectionFactory() {
-        return null;
+    DataSource dataSource(Cloud cloud) {
+        List<ServiceInfo> serviceInfos = cloud.getServiceInfos(RelationalServiceInfo.class);
+        Assert.isTrue(serviceInfos.size() > 0);
+        ServiceInfo serviceInfo = serviceInfos.get(0);
+        String serviceId = serviceInfo.getId();
+        return cloud.getServiceConnector(serviceId, DataSource.class, null);
     }
 
+    @Bean
+    ConnectionFactory connectionFactory(Cloud cloud) {
+        List<ServiceInfo> serviceInfos = cloud.getServiceInfos(RabbitServiceInfo.class);
+        Assert.isTrue(serviceInfos.size() > 0);
+        ServiceInfo serviceInfo = serviceInfos.get(0);
+        String serviceId = serviceInfo.getId();
+        return cloud.getServiceConnector(serviceId, ConnectionFactory.class, null);
+    }
 
+    @Bean
+    CloudFactory cloudFactory() {
+        return new CloudFactory();
+    }
+
+    @Bean
+    Cloud cloud(CloudFactory cloudFactory) {
+        return cloudFactory.getCloud();
+    }
 }
 
 
