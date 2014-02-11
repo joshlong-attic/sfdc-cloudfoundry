@@ -18,7 +18,6 @@ import java.sql.Driver;
 @EnableConfigurationProperties(RabbitProperties.class)
 public class LocalConfiguration {
 
-
     private org.apache.tomcat.jdbc.pool.DataSource pool;
 
     @Bean(destroyMethod = "close")

@@ -9,6 +9,7 @@ import org.aopalliance.intercept.MethodInvocation;
 import org.apache.log4j.Logger;
 import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.aop.framework.ProxyFactoryBean;
@@ -65,12 +66,12 @@ public class SfdcConsoleApplication {
     }
 
     @Bean
-    AmqpAdmin amqpAdmin(CachingConnectionFactory connectionFactory) {
+    AmqpAdmin amqpAdmin( ConnectionFactory connectionFactory) {
         return new RabbitAdmin(connectionFactory);
     }
 
     @Bean
-    RabbitTemplate rabbitTemplate(CachingConnectionFactory connectionFactory) {
+    RabbitTemplate rabbitTemplate( ConnectionFactory connectionFactory) {
         return new RabbitTemplate(connectionFactory);
     }
 

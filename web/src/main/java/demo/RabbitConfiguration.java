@@ -1,13 +1,13 @@
 package demo;
 
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.DirectExchange;
-import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,44 +27,59 @@ class RabbitConfiguration {
     private String exchange = "sfdc_exchange";
 
     @Bean
-    RabbitTemplate fixedReplyQRabbitTemplate(ConnectionFactory connectionFactory) {
+    RabbitTemplate fixedReplyQRabbitTemplate(Exchange exchange, @Qualifier("replyQueue") Queue replyQueue, ConnectionFactory connectionFactory) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
-        template.setExchange(exchange().getName());
+        template.setExchange(exchange.getName());
         template.setRoutingKey(this.routingKey);
         template.setReplyTimeout(-1); // this means that it should wait forever for a reply. TODO is this too dangerous ?
-        template.setReplyQueue(replyQueue());
+        template.setReplyQueue(replyQueue);
         return template;
+    }
+
+    @Bean
+    AmqpAdmin amqpAdmin( ConnectionFactory connectionFactory) {
+        return new RabbitAdmin(connectionFactory);
     }
 
     // this registers the RabbitTemplate as a SMLC so
     // that it can do the right thing for any replies coming back
     @Bean
-    SimpleMessageListenerContainer replyListenerContainer(RabbitTemplate rabbitTemplate, ConnectionFactory connectionFactory) {
+    SimpleMessageListenerContainer replyListenerContainer(
+            @Qualifier("replyQueue") Queue replyQueue,
+            RabbitTemplate rabbitTemplate, ConnectionFactory connectionFactory) {
         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
-        container.setQueues(replyQueue());
+        container.setQueues(replyQueue);
         container.setMessageListener(rabbitTemplate);
         return container;
     }
 
     @Bean
-    DirectExchange exchange() {
-        return new DirectExchange(this.exchange);
+    DirectExchange exchange(AmqpAdmin amqpAdmin) {
+        DirectExchange directExchange = new DirectExchange(this.exchange);
+        amqpAdmin.declareExchange(directExchange);
+        return directExchange;
     }
 
     @Bean
-    Binding binding() {
-        return BindingBuilder.bind(requestQueue()).to(exchange()).with(this.routingKey);
+    Binding binding(AmqpAdmin amqpAdmin, DirectExchange exchange, @Qualifier("requestQueue") Queue queue) {
+        Binding binding = BindingBuilder.bind(queue).to(exchange).with(this.routingKey);
+        amqpAdmin.declareBinding(binding);
+        return binding;
     }
 
     @Bean
-    Queue requestQueue() {
-        return new Queue(this.requests);
+    Queue requestQueue(AmqpAdmin amqpAdmin) {
+        Queue queue = new Queue(this.requests);
+        amqpAdmin.declareQueue(queue);
+        return queue;
     }
 
     @Bean
-    Queue replyQueue() {
-        return new Queue(this.replies);
+    Queue replyQueue(AmqpAdmin amqpAdmin) {
+        Queue queue = new Queue(this.replies);
+        amqpAdmin.declareQueue(queue);
+        return queue;
     }
 
     @Bean
