@@ -4,9 +4,9 @@ package demo.geocoders;
 public interface Geocoder {
 
 
-    LatLong geocode(String address) ;
+    LatLong geocode(String address);
 
-     static class LatLong {
+    static class LatLong {
         private double latitude, longitude;
 
         public LatLong(double latitude, double longitude) {

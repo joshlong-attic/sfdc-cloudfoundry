@@ -1,7 +1,6 @@
 package demo.geocoders;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +20,6 @@ import java.util.Map;
 @Component
 public class MapquestGeocoder implements Geocoder {
 
-    private static Logger log = Logger.getLogger("MapquestGeocoder");
     private String urlPath = "http://www.mapquestapi.com/geocoding/v1/address?key={key}&format=json&callback=&location={location}";
     private RestTemplate restTemplate;
     private String key = null;

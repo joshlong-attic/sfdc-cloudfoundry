@@ -1,28 +1,107 @@
+-- someone creates a batch
+CREATE TABLE sfdc_batch (
+  _id          INT(11) AUTO_INCREMENT PRIMARY KEY,
+  batch_id     VARCHAR(255) NOT NULL,
+  api_endpoint TEXT         NOT NULL,
+#   query        TEXT         NOT NULL, # not sure if we need this yet.
+  access_token TEXT         NOT NULL);
 
-create table sfdc_batch(  batch_id text not null, api_endpoint text not null, access_token text not null);
+-- dump all the leads from SFDC and associate them with a record in this table.
+-- this way, there is only one copy of a given lead, and it can be enriched across multiple requests.
+CREATE TABLE sfdc_batch_lead (
+  _id      INT(11) AUTO_INCREMENT PRIMARY KEY,
+  batch_id VARCHAR(255) NOT NULL REFERENCES sfdc_batch (batch_id),
+  lead_id  INT(11)      NOT NULL REFERENCES sfdc_lead (_id),
+  UNIQUE (batch_id, lead_id));
 
-create table sfdc_contact(
-    _id int(11) auto_increment primary key ,
-    batch_id varchar(255) not null ,
-    latitude double,
-    longitude double,
-    email varchar (255),
-    mailing_state varchar (255),
-    mailing_country varchar (255),
-    mailing_street varchar (255),
-    mailing_city varchar (255),
-    mailing_postal_code varchar (255),
-    sfdc_id varchar (255) UNIQUE,
-    first_name varchar (255),
-    last_name varchar (255));
+/*
+CREATE TABLE sfdc_contact (
+  _id                 INT(11) AUTO_INCREMENT PRIMARY KEY,
+  batch_id            VARCHAR(255) NOT NULL,
+  latitude            DOUBLE,
+  longitude           DOUBLE,
+  email               VARCHAR(255),
+  mailing_state       VARCHAR(255),
+  mailing_country     VARCHAR(255),
+  mailing_street      VARCHAR(255),
+  mailing_city        VARCHAR(255),
+  mailing_postal_code VARCHAR(255),
+  sfdc_id             VARCHAR(255) UNIQUE,
+  first_name          VARCHAR(255),
+  last_name           VARCHAR(255));
+*/
 
-create table sfdc_lead(
-  batch_id varchar(255) not null ,   _id int(11) auto_increment primary key  ,  sfdc_id varchar (255) UNIQUE,  latitude double, longitude double,  annual_revenue text,city text,company text,converted_account_id text,converted_contact_id text,converted_date datetime,converted_opportunity_id text,country text,created_by_id text,created_date datetime,description text,email text,email_bounced_date datetime,
-  email_bounced_reason text,fax text,first_name text,id text,industry text,is_converted text,is_deleted text,is_unread_by_owner text,jigsaw text,jigsaw_contact_id text,
-  last_activity_date datetime,last_modified_by_id text,last_modified_date datetime,last_name text,lead_source text,master_record_id text,
-  mobile_phone text,number_of_employees text,owner_id text,phone text,postal_code text,rating text,salutation text,state text,status text,street text,system_modstamp text,title text,website text ) ;
+CREATE TABLE sfdc_lead (
+  _id                      INT(11) AUTO_INCREMENT PRIMARY KEY,
+  sfdc_id                  VARCHAR(255) UNIQUE,
+  latitude                 DOUBLE,
+  longitude                DOUBLE,
+  annual_revenue           TEXT,
+  city                     TEXT,
+  company                  TEXT,
+  converted_account_id     TEXT,
+  converted_contact_id     TEXT,
+  converted_date           DATETIME,
+  converted_opportunity_id TEXT,
+  country                  TEXT,
+  created_by_id            TEXT,
+  created_date             DATETIME,
+  description              TEXT,
+  email                    TEXT,
+  email_bounced_date       DATETIME,
+  email_bounced_reason     TEXT,
+  fax                      TEXT,
+  first_name               TEXT,
+  id                       TEXT,
+  industry                 TEXT,
+  is_converted             TEXT,
+  is_deleted               TEXT,
+  is_unread_by_owner       TEXT,
+  jigsaw                   TEXT,
+  jigsaw_contact_id        TEXT,
+  last_activity_date       DATETIME,
+  last_modified_by_id      TEXT,
+  last_modified_date       DATETIME,
+  last_name                TEXT,
+  lead_source              TEXT,
+  master_record_id         TEXT,
+  mobile_phone             TEXT,
+  number_of_employees      TEXT,
+  owner_id                 TEXT,
+  phone                    TEXT,
+  postal_code              TEXT,
+  rating                   TEXT,
+  salutation               TEXT,
+  state                    TEXT,
+  status                   TEXT,
+  street                   TEXT,
+  system_modstamp          TEXT,
+  title                    TEXT,
+  website                  TEXT);
 
-
-create view sfdc_directory as select  street as street,  email as email, city as city, state as state ,  postal_code as postal_code,  latitude as latitude, longitude as longitude, _id as sfdc_id, batch_id as batch_id  ,
-    'lead' as record_type  from sfdc_lead  union select   mailing_street as street ,email as email, mailing_city as city, mailing_state as state, mailing_postal_code as postal_code, latitude as latitude, longitude as longitude, _id as sfdc_id, batch_id as batch_id  ,
-     'contact' as record_type from sfdc_contact group by email ;
+CREATE VIEW sfdc_directory AS SELECT
+                                street      AS street,
+                                email       AS email,
+                                city        AS city,
+                                state       AS state,
+                                postal_code AS postal_code,
+                                latitude    AS latitude,
+                                longitude   AS longitude,
+                                _id         AS sfdc_id,
+                                batch_id    AS batch_id,
+                                'lead'      AS record_type
+                              FROM sfdc_lead
+                              UNION
+                              SELECT
+                                mailing_street      AS street,
+                                email               AS email,
+                                mailing_city        AS city,
+                                mailing_state       AS state,
+                                mailing_postal_code AS postal_code,
+                                latitude            AS latitude,
+                                longitude           AS longitude,
+                                _id                 AS sfdc_id,
+                                batch_id            AS batch_id,
+                                'contact'           AS record_type
+                              FROM sfdc_contact
+                              GROUP BY email;

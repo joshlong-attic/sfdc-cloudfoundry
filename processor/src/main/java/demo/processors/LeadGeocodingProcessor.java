@@ -1,8 +1,7 @@
 package demo.processors;
 
+import demo.BatchTemplate;
 import demo.geocoders.Geocoder;
-import demo.geocoders.GoogleGeocoder;
-import demo.SfdcBatchTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -12,17 +11,19 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 @Component
-class SfdcLeadGeolocationProcessor extends AbstractGeolocationProcessor {
+public class LeadGeocodingProcessor
+        extends AbstractGeocodingProcessor {
 
     @Autowired
-    public SfdcLeadGeolocationProcessor(SfdcBatchTemplate sfdcBatchTemplate, JdbcTemplate jdbcTemplate,  Geocoder googleGeocoder) {
-        super(sfdcBatchTemplate, jdbcTemplate, googleGeocoder);
+    public LeadGeocodingProcessor(BatchTemplate batchTemplate,
+                                  JdbcTemplate jdbcTemplate,
+                                  Geocoder geocoder) {
+        super(batchTemplate, jdbcTemplate, geocoder);
     }
-
 
     @Override
     public String selectSql() {
-        return "select * from sfdc_lead  where batch_id = ? " ;
+        return "select * from sfdc_lead where batch_id = ? ";
     }
 
     @Override
@@ -30,11 +31,14 @@ class SfdcLeadGeolocationProcessor extends AbstractGeolocationProcessor {
         return new RowMapper<Address>() {
             @Override
             public Address mapRow(ResultSet resultSet, int i) throws SQLException {
-                return new Address(resultSet.getString("street"),
+                return new Address(
+                        resultSet.getString("street"),
                         resultSet.getString("city"),
                         resultSet.getString("state"),
                         resultSet.getString("postal_code"),
-                        resultSet.getString("country"));
+                        resultSet.getString("country"),
+                        resultSet.getDouble("longitude"),
+                        resultSet.getDouble("latitude"));
             }
         };
     }

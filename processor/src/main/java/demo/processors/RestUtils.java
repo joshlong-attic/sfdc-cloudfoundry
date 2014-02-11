@@ -7,8 +7,7 @@ import java.text.ParseException;
 import java.util.Date;
 
 @Component
-class SfdcRestUtils {
-
+class RestUtils {
 
 
     Date parseDate(Object o) {

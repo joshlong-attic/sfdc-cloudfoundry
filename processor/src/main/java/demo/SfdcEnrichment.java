@@ -7,9 +7,10 @@ import org.springframework.context.annotation.ComponentScan;
 
 
 @ComponentScan
-@EnableAutoConfiguration(exclude = SecurityAutoConfiguration.class)
-public class SfdcEnrichmentProcessors {
+@EnableAutoConfiguration(
+        exclude = SecurityAutoConfiguration.class)
+public class SfdcEnrichment {
     public static void main(String[] args) {
-        SpringApplication.run(SfdcEnrichmentProcessors.class, args);
+        SpringApplication.run(SfdcEnrichment.class, args);
     }
 }

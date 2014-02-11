@@ -10,7 +10,7 @@
     </parent>
     <artifactId>processor</artifactId>
     <properties>
-        <start-class>demo.SfdcEnrichmentProcessors</start-class>
+        <start-class>demo.SfdcEnrichment</start-class>
     </properties>
     <dependencies>
         <dependency>

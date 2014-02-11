@@ -1,8 +1,7 @@
 package demo.processors;
 
+import demo.BatchTemplate;
 import demo.geocoders.Geocoder;
-import demo.geocoders.GoogleGeocoder;
-import demo.SfdcBatchTemplate;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.core.Message;
 import org.springframework.jdbc.core.*;
@@ -13,20 +12,20 @@ import java.sql.SQLException;
 import java.sql.Types;
 
 
-public abstract class AbstractGeolocationProcessor
-        extends AbstractSfdcBatchProcessor {
+public abstract class AbstractGeocodingProcessor
+        extends AbstractBatchProcessor {
 
     private Geocoder googleGeocoder;
     private JdbcTemplate jdbcTemplate;
 
-    public AbstractGeolocationProcessor(SfdcBatchTemplate sfdcBatchTemplate, JdbcTemplate jdbcTemplate, Geocoder googleGeocoder) {
-        super(sfdcBatchTemplate);
+    public AbstractGeocodingProcessor(BatchTemplate batchTemplate, JdbcTemplate jdbcTemplate, Geocoder googleGeocoder) {
+        super(batchTemplate);
         this.googleGeocoder = googleGeocoder;
         this.jdbcTemplate = jdbcTemplate;
 
     }
 
-    public void persistGelocationResult(ResultSet resultSet, AbstractGeolocationProcessor.Address address, Geocoder.LatLong latLong) throws SQLException {
+    public void persistGelocationResult(ResultSet resultSet, AbstractGeocodingProcessor.Address address, Geocoder.LatLong latLong) throws SQLException {
         resultSet.updateDouble("latitude", latLong.getLatitude());
         resultSet.updateDouble("longitude", latLong.getLongitude());
         resultSet.updateRow();
@@ -53,21 +52,22 @@ public abstract class AbstractGeolocationProcessor
             @Override
             public void processRow(ResultSet resultSet) throws SQLException {
                 Address address = addressRowMapper.mapRow(resultSet, offset);
+                if (address.getLatitude() == null || address.getLongitude() == null) {
+                    Geocoder.LatLong latLong = geocode(address);
+                    if (null != latLong) {
+                        persistGelocationResult(resultSet, address, latLong);
+                    }
+                }
                 offset += 1;
-                Geocoder.LatLong latLong = geocode(address);
-                if (null != latLong)
-                    persistGelocationResult(resultSet, address, latLong);
             }
         };
 
         getJdbcTemplate().query(preparedStatementCreator, rowCallbackHandler);
     }
 
-
     public abstract String selectSql();
 
-
-    public  Geocoder.LatLong geocode(Address address) {
+    public Geocoder.LatLong geocode(Address address) {
         Assert.notNull(address, "the provided address can't be null");
 
         String addy = address.getAddress(),
@@ -86,12 +86,11 @@ public abstract class AbstractGeolocationProcessor
         boolean hasCityAndState =
                 !StringUtils.isEmpty(city) && !StringUtils.isEmpty(state);
 
-
         // what about zipcode ?
-        boolean hasZipCodeAndCountry = !StringUtils.isEmpty(zipcode) && !StringUtils.isEmpty( country);
+        boolean hasZipCodeAndCountry = !StringUtils.isEmpty(zipcode) && !StringUtils.isEmpty(country);
 
         // what about just trying city and country?
-        boolean hasCityAndCountry = !StringUtils.isEmpty( city) && !StringUtils.isEmpty( country) ;
+        boolean hasCityAndCountry = !StringUtils.isEmpty(city) && !StringUtils.isEmpty(country);
 
         // fall through if its not empty
         boolean hasStreet = !StringUtils.isEmpty(addy);
@@ -105,13 +104,13 @@ public abstract class AbstractGeolocationProcessor
             latLong = this.googleGeocoder.geocode(String.format("%s, %s", city, state));
         }
         if (latLong == null && hasZipCodeAndCountry) {
-            latLong = this.googleGeocoder.geocode( String.format( "%s, %s",zipcode  , country ) );
+            latLong = this.googleGeocoder.geocode(String.format("%s, %s", zipcode, country));
         }
         if (latLong == null && hasStreet) {
             latLong = this.googleGeocoder.geocode(addy);
         }
-        if(latLong == null && hasCityAndCountry){
-            latLong = this.googleGeocoder.geocode( String.format( "%s, %s",city,country));
+        if (latLong == null && hasCityAndCountry) {
+            latLong = this.googleGeocoder.geocode(String.format("%s, %s", city, country));
         }
 
         return latLong;
@@ -122,13 +121,24 @@ public abstract class AbstractGeolocationProcessor
     public static class Address {
 
         private String city, postalCode, state, country, address;
+        private Double longitude, latitude;
 
-        public Address(String address, String city, String state, String postalCode, String country) {
+        public Address(String address, String city, String state, String postalCode, String country, Double longitude, Double latitude) {
             this.city = city;
             this.state = state;
             this.country = country;
             this.address = address;
             this.postalCode = postalCode;
+            this.latitude = latitude;
+            this.longitude = longitude;
+        }
+
+        public Double getLongitude() {
+            return longitude;
+        }
+
+        public Double getLatitude() {
+            return latitude;
         }
 
         public String getCity() {

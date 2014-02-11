@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.node.DoubleNode;
 import org.apache.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.web.client.RestTemplate;
 
@@ -18,9 +17,8 @@ import java.util.Map;
  *
  * @author Josh Long
  */
-//@Component
-public class GoogleGeocoder
-        implements Geocoder {
+// @Component
+public class GoogleGeocoder implements Geocoder {
 
     private static Logger log = Logger.getLogger("GoogleGeocoder");
     private RestTemplate restTemplate;
@@ -49,7 +47,8 @@ public class GoogleGeocoder
         try {
             Map<String, Object> vars = new HashMap<>();
             vars.put("address", address);
-            ResponseEntity<JsonNode> jsonNodeResponseEntity = this.restTemplate.getForEntity(this.urlPath, JsonNode.class, vars);
+            ResponseEntity<JsonNode> jsonNodeResponseEntity = this.restTemplate.getForEntity(
+                    this.urlPath, JsonNode.class, vars);
             JsonNode body = jsonNodeResponseEntity.getBody();
             if (jsonNodeResponseEntity.getStatusCode().equals(HttpStatus.OK)
                     && body.path("status").textValue().equalsIgnoreCase("OK")) {

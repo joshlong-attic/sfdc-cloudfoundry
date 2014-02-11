@@ -7,16 +7,35 @@
     <meta charset="utf-8"/>
     <link href="webjars/bootstrap/3.0.2/css/bootstrap.css" rel="stylesheet"/>
     <style>
-        #bar {
-            position: absolute;
+        #console {
+            position: fixed;
+            right: 10px;
+            top: 10px;
+            z-index: 1;
+            width: 300px;
+            padding: 10px;
+            border: 2px solid lightgrey;
+            background-color: white;
         }
 
-        html, body, #map-canvas {
+        html, body {
             height: 100%;
             margin: 0px;
             padding: 0px;
-            z-index: -10;
         }
+
+        #map-canvas {
+            position: absolute;
+            top: 0px;
+            left: 0px;
+            height: 100%;
+            margin: 0px;
+            width: 100%;
+            z-index: 2;
+            padding: 0px;
+        }
+
+
     </style>
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&amp;sensor=false"></script>
 
@@ -30,128 +49,113 @@
 
 
     <script language="JavaScript">
-        <!--
-        // setup the map
-        function installMap(point, points) {
+        //<![CDATA[
 
-            var pos = new google.maps.LatLng(point.latitude, point.longitude);
-
-            var map = new google.maps.Map(
-                    document.getElementById('map-canvas'), {
-
-                        center: pos,
-                        zoom: 13,
-                        mapTypeId: google.maps.MapTypeId.ROADMAP,
-
-                        panControl: true,
-                        mapTypeControl: false,
-                        panControlOptions: {
-                            position: google.maps.ControlPosition.RIGHT_CENTER
-                        },
-                        zoomControl: true,
-                        zoomControlOptions: {
-                            style: google.maps.ZoomControlStyle.LARGE,
-                            position: google.maps.ControlPosition.RIGHT_CENTER
-                        },
-                        scaleControl: false,
-                        streetViewControl: false,
-                        streetViewControlOptions: {
-                            position: google.maps.ControlPosition.RIGHT_CENTER
-                        }
-                    });
-
-            new google.maps.InfoWindow({
-                map: map,
-                position: pos,
-                content: 'You Are Here'
-            });
-
-            if (points && points.length > 0) {
-                for (var i = 0; i < points.length; i++) {
-                    new google.maps.InfoWindow({
-                        map: map,
-                        position: new google.maps.LatLng(points[i].latitude, points[i].longitude),
-                        content: points [i].name
-                    });
-                }
-            }
-        }
-
-
-        $(function () {
-            // show the map with the current browser at the center
-            navigator.geolocation.getCurrentPosition(function (position) {
-
-                var points = [];
-                points.push({latitude: 37.7820492, longitude: -122.4040513, name: '875 Howard St'});
-                points.push({latitude: 37.7929789, longitude: -122.4212424, name: '94109'});
-                points.push({latitude: 37.7749295, longitude: -122.4194155, name: 'San Francisco, CA'})
-
-                installMap({latitude: position.coords.latitude, longitude: position.coords.longitude}, points);
-            });
-        });
-
-
+        ///
+        /// globals
+        ///
+        var map;
         var appName = 'sfdc';
         var module = angular.module(appName, [ 'ngResource'  ]);
 
         function SfdcController($scope, $http) {
 
-            $scope.query = 'josh';
+            $scope.query = 'morgan';
 
             $http.get('/user').success(function (data) {
                 $scope.user = data;
             });
+
+            navigator.geolocation.getCurrentPosition(function (position) {
+                var pos = new google.maps.LatLng({latitude: position.coords.latitude, longitude: position.coords.longitude}.latitude, {latitude: position.coords.latitude, longitude: position.coords.longitude}.longitude);
+                map = new google.maps.Map(document.getElementById('map-canvas'), { mapTypeControl: false, center: pos, zoom: 13  });
+                new google.maps.InfoWindow({
+                    map: map,
+                    position: pos,
+                    content: 'You Are Here.'
+                });
+            });
+
+//            $('#console').addClass('console-overlay');
+            $('#console').css({'z-index': '100'});
+
             $scope.process = function () {
                 $http.post('/process', $scope.query).success(function (data) {
                     $scope.batchData = data;
+                    var batchId = $scope.batchData.batchId;
+                    $http.get('/results/' + batchId).success(function (results) {
+                        for (var i = 0; i < results.length; i++) {
+                            var result = results[i];
+                            if ((result.latitude != null && result.longitude != null && result.longitude != 0.0 && result.latitude != 0.0)) {
+                                new google.maps.InfoWindow({
+                                    map: map,
+                                    position: new google.maps.LatLng(result.latitude, result.longitude),
+                                    content: result.toString() + ''
+                                });
+                            }
+                        }
+                    });
                 });
             };
         }
-
-        //-->
+        //]]>
     </script>
 
 
 </head>
 <body>
 
-<div ng-controller="SfdcController">
+<div id="console">
 
-    <div id="status">
 
-        <div>Welcome <b>{{user.username}}</b>!</div>
+    <div ng-controller="SfdcController">
 
-        <div>
-            <form name="searchForm">
-                <input type="text" class="search" name="query" ng-model="query"/>
-                <a ng-click="process()" href="">Search</a>
+        <div id="status">
+
+            <div>Welcome <b>{{user.username}}</b>!</div>
+
+
+            <br/>
+
+
+            <form name="searchForm" class="navbar-form" role="search">
+                <div class="input-group">
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Search"
+                           name="query"
+                           id="query"
+                           ng-model="query"/>
+
+                    <div class="input-group-btn">
+                        <button class="btn btn-default" ng-click="process()" type="submit"><span
+                                class="glyphicon glyphicon-search"></span></button>
+                    </div>
+                </div>
             </form>
+
+
+            <div ng-show="results">
+                <table>
+                    <tr>
+                        <td style="color: lightgrey">Batch ID</td>
+                        <td>{{batchData.batchId}}</td>
+                    </tr>
+                    <tr>
+                        <td style="color: lightgrey">Access Token</td>
+                        <td> {{batchData.accessToken}}</td>
+                    </tr>
+                    <tr>
+                        <td style="color: lightgrey">API Endpoint</td>
+                        <td> {{batchData.apiEndpoint}}</td>
+                    </tr>
+                </table>
+            </div>
+
         </div>
-        <br/>
-        <table>
-            <tr>
-                <td style="color: lightgrey">Batch ID</td>
-                <td>{{batchData.batchId}}</td>
-            </tr>
-            <tr>
-                <td style="color: lightgrey">Access Token</td>
-                <td> {{batchData.accessToken}}</td>
-            </tr>
-            <tr>
-                <td style="color: lightgrey">API Endpoint</td>
-                <td> {{batchData.apiEndpoint}}</td>
-            </tr>
-        </table>
+
 
     </div>
-
-
-</div>
-<div class="bar">
-
-    Google Force
-
 </div>
 <div id="map-canvas"></div>
 

@@ -1,25 +1,27 @@
 package demo.processors;
 
-import demo.SfdcBatchTemplate;
+import demo.BatchTemplate;
 import org.springframework.amqp.core.Message;
 
 import java.util.Map;
 
 
-abstract class AbstractSfdcBatchProcessor implements BatchProcessor {
+public abstract class AbstractBatchProcessor
+        implements BatchProcessor {
 
-    private SfdcBatchTemplate sfdcBatchTemplate;
+    private BatchTemplate batchTemplate;
 
-    AbstractSfdcBatchProcessor(SfdcBatchTemplate sfdcBatchTemplate) {
-        this.sfdcBatchTemplate = sfdcBatchTemplate;
+    public AbstractBatchProcessor(BatchTemplate batchTemplate) {
+        this.batchTemplate = batchTemplate;
     }
 
     @Override
     public void onMessage(final Message message) {
         Map<String, Object> headers = message.getMessageProperties().getHeaders();
         String batchId = (String) headers.get("batchId");
-        this.sfdcBatchTemplate.doInBatch(batchId, new SfdcBatchTemplate.BatchCallback() {
-            @Override
+        this.batchTemplate.doInBatch(batchId,
+                new BatchTemplate.BatchCallback() {
+                    @Override
             public void doInBatch(String batchId) throws Exception {
                 doProcessMessage(batchId, message);
             }

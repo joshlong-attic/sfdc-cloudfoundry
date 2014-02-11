@@ -2,7 +2,7 @@ package demo.processors;
 
 import com.force.api.ForceApi;
 import com.force.api.QueryResult;
-import demo.SfdcBatchTemplate;
+import demo.BatchTemplate;
 import org.springframework.amqp.core.Message;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -12,14 +12,14 @@ import org.springframework.util.StringUtils;
 import java.util.Map;
 
 @Component
-class SfdcContactProcessor extends AbstractSfdcBatchProcessor {
+public class ContactProcessor extends AbstractBatchProcessor {
 
     private ForceApi forceApi;
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
-    SfdcContactProcessor(SfdcBatchTemplate sfdcBatchTemplate, JdbcTemplate jdbcTemplate, ForceApi forceApi) {
-        super(sfdcBatchTemplate);
+    ContactProcessor(BatchTemplate batchTemplate, JdbcTemplate jdbcTemplate, ForceApi forceApi) {
+        super(batchTemplate);
         this.jdbcTemplate = jdbcTemplate;
         this.forceApi = forceApi;
     }
@@ -31,14 +31,15 @@ class SfdcContactProcessor extends AbstractSfdcBatchProcessor {
         if (!StringUtils.hasText(q)) {
             return;
         }
-        String query = "  SELECT Email, MailingState, MailingCountry, MailingCity, MailingStreet , MailingPostalCode, Id,    FirstName, LastName FROM contact "
+        String query = "SELECT Email, MailingState, MailingCountry, MailingCity, MailingStreet , MailingPostalCode, Id, FirstName, LastName FROM contact "
                 + " WHERE (  Email LIKE '%@%" + q + "%') and (  MailingCity <> '') and (MailingCity <>',') and (MailingState <> '') and (MailingCountry <> '') ";
         QueryResult<Map> res = forceApi.query(query);
 
         for (Map<String, Object> row : res.getRecords()) {
 
             String sql = "INSERT ignore INTO sfdc_contact(batch_id,  " +
-                    "email, mailing_state, mailing_country,  mailing_city, mailing_street, mailing_postal_code,   sfdc_id,   first_name, last_name ) values( ?, ?, ?, ?, ?, ?,?, ?, ? ,?) ";
+                    "email, mailing_state, mailing_country,  mailing_city, mailing_street, " +
+                    "mailing_postal_code, sfdc_id, first_name, last_name ) values( ?, ?, ?, ?, ?, ?,?, ?, ? ,?) ";
 
             this.jdbcTemplate.update(sql,
                     batchId,
