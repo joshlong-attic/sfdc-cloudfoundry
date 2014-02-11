@@ -90,7 +90,9 @@ CREATE VIEW sfdc_directory AS
     longitude   AS longitude,
     bl._id      AS sfdc_id,
     batch_id    AS batch_id,
-    'lead'      AS record_type
+    'lead'     AS record_type,
+    first_name AS first_name,
+    last_name  AS last_name
   FROM
     sfdc_batch_lead bl
     LEFT JOIN
