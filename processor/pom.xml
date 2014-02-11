@@ -9,6 +9,9 @@
         <version>0.0.1-SNAPSHOT</version>
     </parent>
     <artifactId>processor</artifactId>
+    <properties>
+        <start-class>demo.SfdcEnrichmentProcessors</start-class>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>org.springframework.security</groupId>
