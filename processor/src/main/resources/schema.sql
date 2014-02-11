@@ -79,29 +79,36 @@ CREATE TABLE sfdc_lead (
   title                    TEXT,
   website                  TEXT);
 
-CREATE VIEW sfdc_directory AS SELECT
-                                street      AS street,
-                                email       AS email,
-                                city        AS city,
-                                state       AS state,
-                                postal_code AS postal_code,
-                                latitude    AS latitude,
-                                longitude   AS longitude,
-                                _id         AS sfdc_id,
-                                batch_id    AS batch_id,
-                                'lead'      AS record_type
-                              FROM sfdc_lead
-                              UNION
-                              SELECT
-                                mailing_street      AS street,
-                                email               AS email,
-                                mailing_city        AS city,
-                                mailing_state       AS state,
-                                mailing_postal_code AS postal_code,
-                                latitude            AS latitude,
-                                longitude           AS longitude,
-                                _id                 AS sfdc_id,
-                                batch_id            AS batch_id,
-                                'contact'           AS record_type
-                              FROM sfdc_contact
-                              GROUP BY email;
+CREATE VIEW sfdc_directory AS
+  SELECT
+    street      AS street,
+    email       AS email,
+    city        AS city,
+    state       AS state,
+    postal_code AS postal_code,
+    latitude    AS latitude,
+    longitude   AS longitude,
+    bl._id      AS sfdc_id,
+    batch_id    AS batch_id,
+    'lead'      AS record_type
+  FROM sfdc_lead sl
+    LEFT JOIN
+    sfdc_batch_lead bl
+      ON
+        bl.lead_id = sl._id
+  GROUP BY email;
+
+
+/* UNION
+                             SELECT
+                               mailing_street      AS street,
+                               email               AS email,
+                               mailing_city        AS city,
+                               mailing_state       AS state,
+                               mailing_postal_code AS postal_code,
+                               latitude            AS latitude,
+                               longitude           AS longitude,
+                               _id                 AS sfdc_id,
+                               batch_id            AS batch_id,
+                               'contact'           AS record_type
+                             FROM sfdc_contact*/

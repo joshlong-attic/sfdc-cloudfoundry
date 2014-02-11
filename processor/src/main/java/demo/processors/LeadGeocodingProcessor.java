@@ -23,7 +23,7 @@ public class LeadGeocodingProcessor
 
     @Override
     public String selectSql() {
-        return "select * from sfdc_lead where batch_id = ? ";
+        return "select   l.* from sfdc_batch_lead bl left join sfdc_lead l on l._id = bl.lead_id where bl.batch_id = ? ";
     }
 
     @Override
@@ -31,14 +31,18 @@ public class LeadGeocodingProcessor
         return new RowMapper<Address>() {
             @Override
             public Address mapRow(ResultSet resultSet, int i) throws SQLException {
+
+                Object longitude = resultSet.getObject("longitude"),
+                        latitude = resultSet.getObject("latitude");
+
                 return new Address(
                         resultSet.getString("street"),
                         resultSet.getString("city"),
                         resultSet.getString("state"),
                         resultSet.getString("postal_code"),
                         resultSet.getString("country"),
-                        resultSet.getDouble("longitude"),
-                        resultSet.getDouble("latitude"));
+                        longitude == null ? null : (Double) longitude,
+                        latitude == null ? null : (Double) latitude);
             }
         };
     }

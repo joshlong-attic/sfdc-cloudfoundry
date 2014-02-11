@@ -82,7 +82,7 @@ public class LeadProcessor extends AbstractBatchProcessor {
             tableColNames[i] = camelCaseToTableCol(sooqlColNames[i]);
         }
 
-        String qMarks = StringUtils.repeat("?,", 2 + tableColNames.length); //1 more because we have a batch_id column
+        String qMarks = StringUtils.repeat("?,", 1 + tableColNames.length); //1 more because we have a batch_id column
         qMarks = qMarks.substring(0, qMarks.length() - 1);
 
         String query =
@@ -92,7 +92,8 @@ public class LeadProcessor extends AbstractBatchProcessor {
 
         QueryResult<Map> res = this.forceApi.query(query);
 
-        String insertIntoLeadTableSql = String.format(" insert ignore into sfdc_lead( batch_id, sfdc_id, %s ) values ( %s )", StringUtils.join(tableColNames, ","), qMarks);
+        String insertIntoLeadTableSql = String.format(" insert ignore into sfdc_lead(  sfdc_id, %s ) " +
+                " values ( %s )", StringUtils.join(tableColNames, ","), qMarks);
 
         Set<String> sfdcIdsToAssignToBatch = new HashSet<>();
 
@@ -106,7 +107,7 @@ public class LeadProcessor extends AbstractBatchProcessor {
             pscf.setReturnGeneratedKeys(true);
             String sfdcId = (String) row.get("Id");
             Object[] parameters = new Object[]{
-                    batchId,
+                    //  batchId,
                     sfdcId,
                     row.get("AnnualRevenue"),
                     row.get("City"),
@@ -182,11 +183,9 @@ public class LeadProcessor extends AbstractBatchProcessor {
             inClause.add(String.format("'%s'", x));
         }
         String insertTheRest = String.format(
-                "insert into sfdc_batch_lead ( batch_id, lead_id) select ?, sl._id from sfdc_lead sl where sl.sfdc_id IN ( %s )", StringUtils.join(inClause, ","));
+                "insert ignore into sfdc_batch_lead ( batch_id, lead_id) select ?, " +
+                        " sl._id from sfdc_lead sl where sl.sfdc_id IN ( %s )", StringUtils.join(inClause, ","));
         if (sfdcIdsToAssignToBatch.size() > 0) {
-            List<Object> parameters = new ArrayList<>();
-            parameters.add(batchId);
-            parameters.addAll(sfdcIdsToAssignToBatch);
             int restOfUpdatedRows = jdbcTemplate.update(insertTheRest, batchId);
             log("insertTheRest=" + insertTheRest);
             log("restOfUpdatedRows=" + restOfUpdatedRows);
