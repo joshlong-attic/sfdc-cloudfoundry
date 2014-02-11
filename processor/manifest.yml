@@ -1,11 +1,11 @@
 ---
 applications:
-- name: sfdc-web
+- name: sfdc-processor
   memory: 256M
   instances: 1
-  host: sfdc-web
+  host: sfdc-processor
   domain: cfapps.io
-  path: target/web-0.0.1-SNAPSHOT.jar
+  path: target/processor-0.0.1-SNAPSHOT.jar
   services:
     sfdc-mysql:
       label: cleardb

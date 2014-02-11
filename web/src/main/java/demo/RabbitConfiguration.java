@@ -1,7 +1,6 @@
 package demo;
 
 import org.springframework.amqp.core.*;
-import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -18,16 +17,17 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 class RabbitConfiguration {
 
+    public static final String REQUEST_Q = "sfdc_requests";
+    public static final String REPLY_Q = "sfdc_replies";
     @Value("${processor.requests}")
-    private String requests = "sfdc_requests";
-
+    private String requests = REQUEST_Q ;//"sfdc_requests";
     @Value("${processor.replies}")
-    private String replies = "sfdc_replies";
+    private String replies =REPLY_Q ;// "sfdc_replies";
     private String routingKey = "sfdc";
     private String exchange = "sfdc_exchange";
 
     @Bean
-    RabbitTemplate fixedReplyQRabbitTemplate(Exchange exchange, @Qualifier("replyQueue") Queue replyQueue, ConnectionFactory connectionFactory) {
+    RabbitTemplate fixedReplyQRabbitTemplate(Exchange exchange, @Qualifier(REPLY_Q) Queue replyQueue, ConnectionFactory connectionFactory) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setExchange(exchange.getName());
         template.setRoutingKey(this.routingKey);
@@ -37,7 +37,7 @@ class RabbitConfiguration {
     }
 
     @Bean
-    AmqpAdmin amqpAdmin( ConnectionFactory connectionFactory) {
+    AmqpAdmin amqpAdmin(ConnectionFactory connectionFactory) {
         return new RabbitAdmin(connectionFactory);
     }
 
@@ -45,11 +45,10 @@ class RabbitConfiguration {
     // that it can do the right thing for any replies coming back
     @Bean
     SimpleMessageListenerContainer replyListenerContainer(
-            @Qualifier("replyQueue") Queue replyQueue,
             RabbitTemplate rabbitTemplate, ConnectionFactory connectionFactory) {
         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
-        container.setQueues(replyQueue);
+        container.setQueueNames( REPLY_Q);
         container.setMessageListener(rabbitTemplate);
         return container;
     }
@@ -62,20 +61,20 @@ class RabbitConfiguration {
     }
 
     @Bean
-    Binding binding(AmqpAdmin amqpAdmin, DirectExchange exchange, @Qualifier("requestQueue") Queue queue) {
+    Binding binding(AmqpAdmin amqpAdmin, DirectExchange exchange, @Qualifier(REQUEST_Q) Queue queue) {
         Binding binding = BindingBuilder.bind(queue).to(exchange).with(this.routingKey);
         amqpAdmin.declareBinding(binding);
         return binding;
     }
 
-    @Bean
+    @Bean (name = REQUEST_Q)
     Queue requestQueue(AmqpAdmin amqpAdmin) {
         Queue queue = new Queue(this.requests);
         amqpAdmin.declareQueue(queue);
         return queue;
     }
 
-    @Bean
+    @Bean (name = REPLY_Q)
     Queue replyQueue(AmqpAdmin amqpAdmin) {
         Queue queue = new Queue(this.replies);
         amqpAdmin.declareQueue(queue);
