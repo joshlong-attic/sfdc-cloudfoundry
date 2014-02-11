@@ -9,13 +9,15 @@
     <style>
         #console {
             position: fixed;
-            right: 10px;
-            top: 10px;
+            right: 20px;
+            top: 20px;
             z-index: 1;
             width: 400px;
             padding: 10px;
             border: 2px solid lightgrey;
             background-color: white;
+            overflow-y: scroll;
+            bottom: 20px;
         }
 
         html, body {
@@ -33,6 +35,16 @@
             width: 100%;
             z-index: 2;
             padding: 0px;
+        }
+
+        .results-container {
+            margin-top: 30px;
+            margin-left: 30px;
+        }
+
+        #status {
+            margin-top: 10px;
+            margin-bottom: 10px;
         }
 
 
@@ -67,8 +79,17 @@
                 $scope.user = data;
             });
 
+            var toLatLng = function (p) {
+                var p = new google.maps.LatLng(p['coords']['latitude'], p['coords']['longitude']);
+                return p;
+            }
+
             navigator.geolocation.getCurrentPosition(function (position) {
-                var pos = new google.maps.LatLng({latitude: position.coords.latitude, longitude: position.coords.longitude}.latitude, {latitude: position.coords.latitude, longitude: position.coords.longitude}.longitude);
+
+
+                var pos = toLatLng(position); //new google.maps.LatLng({latitude: position.coords.latitude, longitude: position.coords.longitude}.latitude, {latitude: position.coords.latitude, longitude: position.coords.longitude}.longitude);
+
+
                 map = new google.maps.Map(document.getElementById('map-canvas'), { mapTypeControl: false, center: pos, zoom: 13  });
                 new google.maps.InfoWindow({
                     map: map,
@@ -93,6 +114,14 @@
                         });
                     }
                 }
+            };
+
+            $scope.cleanName = function (r) {
+                var fn = r.firstName.toLowerCase(),
+                        ln = r.lastName.toLowerCase();
+                fn = (fn.charAt(0) + '').toUpperCase() + fn.substring(1);
+                ln = (ln.charAt(0) + '').toUpperCase() + ln.substring(1);
+                return ln + ', ' + fn;
             };
 
             $scope.process = function () {
@@ -138,17 +167,25 @@
             </div>
         </div>
     </form>
-    <div ng-show="results.length > 0 ">
+    <div class="results-container" ng-show="results.length > 0 ">
         <div id="status" ng-show="batchData.batchId">
-            Displaying {{ results.length }} results
+             <span class="results-count">
+                 Displaying {{ results.length }} results.
+             </span>
         </div>
 
-        <div ng-repeat="r in results">
-            {{ r.firstName }} {{ r.lastName }}
+        <div class="inline">
+            <div ng-repeat="r in results">
+                <strong> {{ cleanName(r) }} </strong> -
+                <span style="font-size: smaller"><a href="#">LinkedIn</a></span>
+                <!--<a href="#">view on Twitter</a> |-->
+            </div>
         </div>
+
     </div>
 
 </div>
+
 
 <div id="map-canvas"></div>
 
