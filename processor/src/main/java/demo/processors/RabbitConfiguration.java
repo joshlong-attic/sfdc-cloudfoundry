@@ -34,52 +34,8 @@ import java.util.List;
 import java.util.Map;
 
 
-/**
- * this should work inside of cloud foundry
- */
 @Configuration
-@Profile("cloud")
-class CloudFoundryConfiguration {
-
-    Log log = LogFactory.getLog(getClass());
-
-    @PostConstruct
-    public void setup(){
-        log.debug(getClass().getName() + " has been loaded!");
-    }
-
-    @Bean
-    DataSource dataSource(Cloud cloud) {
-        List<ServiceInfo> serviceInfos = cloud.getServiceInfos(RelationalServiceInfo.class);
-        Assert.isTrue(serviceInfos.size() > 0);
-        ServiceInfo serviceInfo = serviceInfos.get(0);
-        String serviceId = serviceInfo.getId();
-        return cloud.getServiceConnector(serviceId, DataSource.class, null);
-    }
-
-    @Bean
-    ConnectionFactory connectionFactory(Cloud cloud) {
-        List<ServiceInfo> serviceInfos = cloud.getServiceInfos(RabbitServiceInfo.class);
-        Assert.isTrue(serviceInfos.size() > 0);
-        ServiceInfo serviceInfo = serviceInfos.get(0);
-        String serviceId = serviceInfo.getId();
-        return cloud.getServiceConnector(serviceId, ConnectionFactory.class, null);
-    }
-
-    @Bean
-    CloudFactory cloudFactory() {
-        return new CloudFactory();
-    }
-
-    @Bean
-    Cloud cloud(CloudFactory cloudFactory) {
-        return cloudFactory.getCloud();
-    }
-}
-
-
-@Configuration
-class SfdcProcessorsConfiguration {
+class RabbitConfiguration {
 
 
     @Value("${processor.requests}")
@@ -123,30 +79,7 @@ class SfdcProcessorsConfiguration {
         return container;
     }
 
-    @Bean
-    ForceApi forceApi(final JdbcTemplate jdbcTemplate, final SfdcBatchTemplate sfdcBatchTemplate) {
-        return this.proxy(ForceApi.class, new MethodInterceptor() {
-            @Override
-            public Object invoke(MethodInvocation invocation) throws Throwable {
-                String batchId = sfdcBatchTemplate.requiredCurrentBatchId();
-                Map<String, Object> row = jdbcTemplate.queryForMap(
-                        "select * from sfdc_batch where batch_id = ? limit 1", batchId);
-                ApiSession session = new ApiSession();
-                session.setAccessToken((String) row.get("access_token"));
-                session.setApiEndpoint((String) row.get("api_endpoint"));
-                ForceApi forceApi = new ForceApi(session);
-                return invocation.getMethod().invoke(forceApi, invocation.getArguments());
-            }
-        });
-    }
 
-    private <T> T proxy(Class<T> tClass, MethodInterceptor methodInterceptor) {
-        ProxyFactoryBean proxyFactoryBean = new ProxyFactoryBean();
-        proxyFactoryBean.addAdvice(methodInterceptor);
-        proxyFactoryBean.setProxyTargetClass(true);
-        proxyFactoryBean.setTargetClass(tClass);
-        return tClass.cast(proxyFactoryBean.getObject());
-    }
 
     private static class NoOpSimpleMessageConverter extends SimpleMessageConverter {
         @Override
