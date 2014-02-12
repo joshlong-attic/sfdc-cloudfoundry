@@ -37,7 +37,7 @@ class CloudFoundryConfiguration {
                 "spring.datasource.driverClassName", Driver.class);
 
 
-        URI uri = new URI("jdbc:mysql://bd1349d03a0d63:5e87a384@us-cdbr-east-05.cleardb.net:3306/ad_9c3fc7bd5ae423d");
+        URI uri = new URI("mysql://bd1349d03a0d63:5e87a384@us-cdbr-east-05.cleardb.net:3306/ad_9c3fc7bd5ae423d");
 
         String username = uri.getUserInfo().split(":")[0],
                 password = uri.getUserInfo().split(":")[1],
