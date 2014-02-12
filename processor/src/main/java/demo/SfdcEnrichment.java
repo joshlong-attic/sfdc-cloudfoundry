@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.SecurityAutoConfiguration;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 
 
@@ -14,6 +15,9 @@ import org.springframework.context.annotation.ComponentScan;
         SecurityAutoConfiguration.class})
 public class SfdcEnrichment {
     public static void main(String[] args) {
-        SpringApplication.run(SfdcEnrichment.class, args);
+
+        ConfigurableApplicationContext applicationContext = SpringApplication.run(SfdcEnrichment.class, args);
+        applicationContext.start();
+
     }
 }

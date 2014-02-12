@@ -4,8 +4,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.cloud.Cloud;
-import org.springframework.cloud.CloudFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -34,15 +32,18 @@ class CloudFoundryConfiguration {
 
 
     @Bean(destroyMethod = "close")
-    DataSource dataSource(Environment environment) {
+    DataSource dataSource(Environment environment) throws Exception {
 
         Class<Driver> driverClassName = environment.getPropertyAsClass(
                 "spring.datasource.driverClassName", Driver.class);
 
-        String username = "bf2395e0f9b3f1",
-                password = "0fc24418",
-                host = "us-cdbr-east-05.cleardb.net",
-                db = "ad_7a84275d93529ba";
+
+        URI uri = new URI("jdbc:mysql://bd1349d03a0d63:5e87a384@us-cdbr-east-05.cleardb.net:3306/ad_9c3fc7bd5ae423d");
+
+        String username = uri.getUserInfo().split(":")[0],
+                password = uri.getUserInfo().split(":")[1],
+                host = uri.getHost(),
+                db = uri.getPath().substring(1);
 
         String url = String.format("jdbc:mysql://%s/%s", host, db);
         org.apache.tomcat.jdbc.pool.DataSource pool = new org.apache.tomcat.jdbc.pool.DataSource();
