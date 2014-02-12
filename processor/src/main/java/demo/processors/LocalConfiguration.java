@@ -11,6 +11,7 @@ import org.springframework.core.env.Environment;
 
 import javax.annotation.PreDestroy;
 import javax.sql.DataSource;
+import java.net.URI;
 import java.sql.Driver;
 
 @Configuration
@@ -43,22 +44,19 @@ public class LocalConfiguration {
     }
 
     @Bean
-    ConnectionFactory rabbitConnectionFactory(RabbitProperties config) {
-        CachingConnectionFactory factory = new CachingConnectionFactory(
-                config.getHost());
-        factory.setPort(config.getPort());
-        if (config.getUsername() != null) {
-            factory.setUsername(config.getUsername());
-        }
-        if (config.getPassword() != null) {
-            factory.setPassword(config.getPassword());
-        }
-        if (config.getVirtualHost() != null) {
-            factory.setVirtualHost(config.getVirtualHost());
-        }
-        return factory;
-    }
+    ConnectionFactory rabbitConnectionFactory() throws Throwable {
+        String uri = "amqp://guest:guest@127.0.0.1:5672/".trim(); // / 5672
+        //   String uri = "amqp://dfbxoafe:6LPEQ28AF7W7cDN8Am19e7BAu2bzKrEd@lemur.cloudamqp.com/dfbxoafe".trim();
+        URI uriObject = new URI(uri);
+        com.rabbitmq.client.ConnectionFactory factory = new com.rabbitmq.client.ConnectionFactory();
+        factory.setUri(uri);
 
+        CachingConnectionFactory c = new CachingConnectionFactory(factory);
+        c.setUsername(uriObject.getUserInfo().split(":")[0]);
+        c.setPassword(uriObject.getUserInfo().split(":")[1]);
+        c.setVirtualHost(uriObject.getPath());
+        return c;
+    }
 
     @PreDestroy
     public void close() {

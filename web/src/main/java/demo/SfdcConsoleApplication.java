@@ -7,11 +7,6 @@ import com.force.sdk.oauth.context.SecurityContext;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.apache.log4j.Logger;
-import org.springframework.amqp.core.AmqpAdmin;
-import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.amqp.rabbit.core.RabbitAdmin;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -65,15 +60,6 @@ public class SfdcConsoleApplication {
         });
     }
 
-    @Bean
-    AmqpAdmin amqpAdmin( ConnectionFactory connectionFactory) {
-        return new RabbitAdmin(connectionFactory);
-    }
-
-    @Bean
-    RabbitTemplate rabbitTemplate( ConnectionFactory connectionFactory) {
-        return new RabbitTemplate(connectionFactory);
-    }
 
     @Bean
     JdbcTemplate jdbcTemplate(DataSource dataSource) {
