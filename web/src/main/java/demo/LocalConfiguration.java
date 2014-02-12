@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 
 import javax.annotation.PreDestroy;
@@ -15,6 +16,7 @@ import java.sql.Driver;
 
 @Configuration
 @Profile("default")
+@PropertySource("/sfdc-default.properties")
 @EnableConfigurationProperties(RabbitProperties.class)
 public class LocalConfiguration {
 

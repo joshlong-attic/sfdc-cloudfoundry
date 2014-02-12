@@ -7,6 +7,7 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 
 import javax.annotation.PostConstruct;
@@ -21,6 +22,7 @@ import java.sql.Driver;
  */
 @Configuration
 @Profile("cloud")
+@PropertySource("/sfdc-default.properties")
 class CloudFoundryConfiguration {
 
     Log log = LogFactory.getLog(getClass());
