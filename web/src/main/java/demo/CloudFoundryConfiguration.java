@@ -51,13 +51,14 @@ class CloudFoundryConfiguration {
         pool.setUsername(username);
         pool.setUrl(url);
         pool.setPassword((password));
-        pool.setInitialSize((10));
-        pool.setMaxActive((100));
-        pool.setMaxIdle(8);
-        pool.setMinIdle(8);
+        pool.setInitialSize((5));
+        pool.setMaxActive((5));
+        pool.setMaxIdle(5);
+        pool.setMinIdle(5);
         pool.setTestOnBorrow((false));
         pool.setTestOnReturn((false));
         pool.setValidationQuery("select 1");
+        pool.setRemoveAbandoned(true);
         return pool;
     }
 
