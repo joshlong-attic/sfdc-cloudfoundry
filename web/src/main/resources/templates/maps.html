@@ -42,6 +42,12 @@
         margin-left: 30px;
     }
 
+    .expanded-result {
+        background-color: gainsboro;
+        padding: 5px;
+        margin-bottom: 5px;
+    }
+
     #status {
         margin-top: 10px;
         margin-bottom: 10px;
@@ -130,22 +136,63 @@
                 }
                 return c;
             };
+
+            var oldResults = [];
+
+            $scope.focusOnResults = function (records) {
+                $scope.$apply(function () {
+
+
+                    oldResults = $scope.results;
+                    $scope.results = records;
+
+                    if ($scope.results.length == 1) {
+                        $scope.focusOnResult($scope.results[0])
+                    }
+
+                });
+            };
+            $scope.removeResultFocus = function (record) {
+                record.expanded = false;
+            };
+            $scope.focusOnResult = function (record) {
+                record.expanded = true
+            };
+
             var positionForInfoPoint = function (records) {
                 var latLong = records.length >= 1 ? records[0] : null;
                 console.debug('latLong:' + JSON.stringify(latLong));
                 return new google.maps.LatLng(latLong.latitude, latLong.longitude);
             };
+
+
             jQuery.each(mapOfPoints, function (k, v) {
+                var records = v;
                 console.debug(k + '=' + v.length);
-                var content = contentForInfoPoint(v)
-                markers.push(new google.maps.Marker({
+                var content = contentForInfoPoint(v);
+                var marker = new google.maps.Marker({
                     visible: true,
                     map: map,
                     title: content,
                     position: positionForInfoPoint(v)
-                }));
-                console.debug('adding a marker for ' + content)
+                });
 
+                markers.push(marker);
+
+                google.maps.event.addListener(marker, 'click', function () {
+
+                    // lets also draw a InfoWindow
+
+                    // first, lets make it so that clcking on somehting loads the details in the side bar
+
+                    $scope.focusOnResults(records);
+
+
+                    map.setZoom(8);
+                    map.setCenter(marker.getPosition());
+                });
+
+                console.debug('adding a marker for ' + content)
             });
         };
 
@@ -190,9 +237,11 @@
             });
         };
 
-
+        $scope.address = function (r) {
+            return  'Some street'
+        };
         //todo remove this later
-        //   $scope.process();
+        ///  $scope.process();
 
     }
 
@@ -236,8 +285,26 @@
         <div class="inline">
             <div ng-repeat="r in results">
                 <strong> {{ cleanName(r) }} </strong> -
-                <span style="font-size: smaller"><a href="#">LinkedIn</a></span>
-                <!--<a href="#">view on Twitter</a> |-->
+                <span style="font-size: smaller">
+                    <span ng-show="r.expanded">
+                        <a ng-click="removeResultFocus(r)" href="#">hide</a>
+                    </span>
+                    <span ng-show="!r.expanded">
+                        <a ng-click="focusOnResult(r)" href="#">expand</a>
+                    </span>
+                </span>
+
+                <div class="expanded-result" ng-show="r.expanded">
+
+
+                    <b>Address:</b> <br/>
+                    {{ address( r) }}
+                    <br/>
+
+
+                </div>
+
+
             </div>
         </div>
 
