@@ -1,0 +1,38 @@
+# app settings
+
+spring:
+  thymeleaf:
+    cache: false
+server:
+  port: 8080
+processor:
+  requests : sfdc_requests
+  replies : sfdc_replies
+
+
+---
+spring:
+  profiles: cloud
+  datasource:
+    maxActive: 4
+    maxIdle  : 4
+    minIdle : 2
+    initialSize : 2
+sfdc:
+  clientKey: 3MVG9A2kN3Bn17hsqX7tRDUynetw4H99WxIOAuZaatFrOTCtmwFStE2AZrgpO9ViWpsGlGP87RvkwSHpOtKNj
+  clientSecret : 5817087196915840373
+
+---
+sfdc:
+  clientKey: 3MVG9A2kN3Bn17hsqX7tRDUynekC.kfDr48wYkhUSBTv.ooD7UkUVZ7ad9T4l7PIjHvXEmNLOkzg1U56xLkYS
+  clientSecret: 2466192681286822700
+spring:
+  profiles: default
+  datasource:
+    driverClassName: com.mysql.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1/sfdc
+    username : sfdc
+    password:  sfdc
+  jpa:
+    hibernate.ddl-auto: none
+    show_sql: false

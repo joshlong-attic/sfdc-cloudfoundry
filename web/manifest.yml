@@ -1,21 +1,21 @@
 ---
 applications:
-- name: sfdc-web
-  memory: 256M
+- name: sfdc
+  memory: 512M
   instances: 1
-  host: sfdc-web
+  host: sfdc
   domain: cfapps.io
-  path: target/web-0.0.1-SNAPSHOT.jar
+  path: target/sfdc-web.jar
+  env:
+    SPRING_PROFILES_ACTIVE: cloud
   services:
-    sfdc-mysql:
+    sfdc_mysql:
       label: cleardb
       provider: cleardb
       version: n/a
-      plan: spark
-    sfdc-rabbitmq:
+      plan: boost
+    sfdc_amqp:
       label: cloudamqp
       provider: cloudamqp
       version: n/a
       plan: lemur
-env:
-    SPRING_PROFILES_ACTIVE: cloud

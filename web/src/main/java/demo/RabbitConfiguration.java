@@ -9,20 +9,21 @@ import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 
 /**
  * @author Josh Long (josh@joshlong.com)
  */
-@Configuration
+//@Configuration
 class RabbitConfiguration {
 
     public static final String REQUEST_Q = "sfdc_requests";
     public static final String REPLY_Q = "sfdc_replies";
+
     @Value("${processor.requests}")
-    private String requests = REQUEST_Q ;//"sfdc_requests";
+    private String requests = REQUEST_Q;
+
     @Value("${processor.replies}")
-    private String replies =REPLY_Q ;// "sfdc_replies";
+    private String replies = REPLY_Q;
     private String routingKey = "sfdc";
     private String exchange = "sfdc_exchange";
 

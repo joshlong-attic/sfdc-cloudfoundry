@@ -67,217 +67,213 @@
 
 
 <script language="JavaScript">
-    //<![CDATA[
+//<![CDATA[
 
-    ///
-    /// globals
-    ///
-    var map;
-    var appName = 'sfdc';
-    var module = angular.module(appName, [ 'ngResource'  ]);
+///
+/// globals
+///
+var map;
+var appName = 'sfdc';
+var module = angular.module(appName, [ 'ngResource'  ]);
 
-    function SfdcController($scope, $http) {
+function SfdcController($scope, $http) {
 
-        $scope.query = 'morgan';
-        $scope.results = [];
+    $scope.query = 'morgan';
+    $scope.results = [];
 
-        $http.get('/user').success(function (data) {
-            $scope.user = data;
+    // private variables
+    var markers = [];
+    var oldResults = [];
+
+    $http.get('/user').success(function (data) {
+        $scope.user = data;
+    });
+
+    var renderResults = function (results) {
+        // clear existing info points if any
+        jQuery.each(markers, function (i, ip) {
+            ip.setMap(null);
         });
-
-        var toLatLng = function (p) {
-            return new google.maps.LatLng(p['coords']['latitude'], p['coords']['longitude']);
-        };
-
-        var keyForRecord = function (record) {
-            return record.longitude + ':' + record.latitude;
-        };
-
-        var markers = [];
-
-        var renderMap = function () {
-            var results = $scope.results;
-            // first lets get rid of the records that dont lend themselves to being displayed on a map
-            //
-            var x = [];
-            for (var p = 0; p < results.length; p++) {
-                var r = results [p];
-                var dud = function (e) {
-                    return e == null || e == 0.0;
-                };
-                var perfect = !dud(r.latitude) && !dud(r.longitude);
-                if (perfect) {
-                    x.push(r);
-                }
-
-            }
-            $scope.results = x; // filter out the unwanted bits
-
-            // lets normalize the records into a map
-            var mapOfPoints = {};
-            jQuery.each($scope.results, function (indx, record) {
-                var k = keyForRecord(record);
-                if (!(k in mapOfPoints)) {
-                    mapOfPoints[k] = [];
-                }
-                mapOfPoints[k].push(record);
-                console.debug('there are ' + mapOfPoints[k].length + ' records associated with the key ' + k)
-            });
-
-            // now loop through normalized results and setup markers
-            var contentForInfoPoint = function (records) {
-                var c = '';
-                if (records.length == 1) {
-                    var r = records [0];
-                    c = '<h1>' + $scope.cleanName(r) + '</h1>' + '<P>' + r.email + '</P>';
-                }
-                else {
-                    c = '(' + records.length + ' results)';
-                }
-                return c;
-            };
-
-            var oldResults = [];
-
-            $scope.focusOnResults = function (records) {
-                $scope.$apply(function () {
-
-
-                    oldResults = $scope.results;
-                    $scope.results = records;
-                    jQuery.each($scope.results, function (i, record) {
-                        record.expanded = false;
-                    });
-                    if ($scope.results.length == 1) {
-                        $scope.focusOnResult($scope.results[0])
-                    }
-
-                });
-            };
-            $scope.removeResultFocus = function (record) {
-                record.expanded = false;
-            };
-            $scope.focusOnResult = function (record) {
-                record.expanded = true
-            };
-
-            var positionForInfoPoint = function (records) {
-                var latLong = records.length >= 1 ? records[0] : null;
-                console.debug('latLong:' + JSON.stringify(latLong));
-                return new google.maps.LatLng(latLong.latitude, latLong.longitude);
-            };
-
-
-            jQuery.each(mapOfPoints, function (k, v) {
-                var records = v;
-                console.debug(k + '=' + v.length);
-                var content = contentForInfoPoint(v);
-                var marker = new google.maps.Marker({
-                    visible: true,
-                    map: map,
-                    title: content,
-                    position: positionForInfoPoint(v)
-                });
-
-                markers.push(marker);
-
-                google.maps.event.addListener(marker, 'click', function () {
-
-                    // lets also draw a InfoWindow
-
-                    // first, lets make it so that clcking on somehting loads the details in the side bar
-
-                    $scope.focusOnResults(records);
-
-
-                    map.setZoom(8);
-                    map.setCenter(marker.getPosition());
-                });
-
-                console.debug('adding a marker for ' + content)
-            });
-        };
-
-        var renderResults = function (results) {
-            // clear existing info points if any
-            jQuery.each(markers, function (i, ip) {
-                ip.setMap(null);
-            });
-            $scope.results = results;
-            renderMap();
-        };
-
-        navigator.geolocation.getCurrentPosition(function (position) {
-            var pos = toLatLng(position);
-            map = new google.maps.Map(document.getElementById('map-canvas'), { mapTypeControl: false, center: pos, zoom: 13  });
-            new google.maps.InfoWindow({
-                map: map,
-                position: pos,
-                content: 'You Are Here.'
-            });
-            $('#console').css({'z-index': '100'});
+        $scope.results = results;
+        renderMap();
+    };
+    var toLatLng = function (p) {
+        return new google.maps.LatLng(p['coords']['latitude'], p['coords']['longitude']);
+    };
+    var keyForRecord = function (record) {
+        return record.longitude + ':' + record.latitude;
+    };
+    var toggleAll = function (v) {
+        jQuery.each($scope.results, function (i, record) {
+            record.expanded = v;
         });
-
-
-        /// public methods
-
-        $scope.cleanName = function (r) {
-            var fn = r.firstName.toLowerCase(),
-                    ln = r.lastName.toLowerCase();
-            fn = (fn.charAt(0) + '').toUpperCase() + fn.substring(1);
-            ln = (ln.charAt(0) + '').toUpperCase() + ln.substring(1);
-            return ln + ', ' + fn;
-        };
-
-        $scope.process = function () {
-            $http.post('/process', $scope.query).success(function (data) {
-                $scope.batchData = data;
-                $scope.batchId = $scope.batchData.batchId;
-                $http.get('/results/' + $scope.batchId).success(function (results) {
-                    renderResults(results);
-                });
-            });
-        };
-
-        $scope.address = function (r) {
-            function hasText(s) {
-                return (s == null || s == '' ? false : true);
+    };
+    var renderMap = function () {
+        var results = $scope.results;
+        // first lets get rid of the records that dont lend themselves to being displayed on a map
+        //
+        var x = [];
+        for (var p = 0; p < results.length; p++) {
+            var r = results [p];
+            var dud = function (e) {
+                return e == null || e == 0.0;
+            };
+            var perfect = !dud(r.latitude) && !dud(r.longitude);
+            if (perfect) {
+                x.push(r);
             }
 
-            var s = '';
+        }
+        $scope.results = x; // filter out the unwanted bits
 
-            if (hasText(r.street)) s += r.street + ' ';
-            if (hasText(r.city)) s += r.city + ',';
-            if (hasText(r.state)) s += ' ' + r.state + '. ';
-            if (hasText(r.postalCode)) s += ' ' + r.postalCode;
-            if (!hasText(s)) {
-                return '(location unknown)';
+        // lets normalize the records into a map
+        var mapOfPoints = {};
+        jQuery.each($scope.results, function (indx, record) {
+            var k = keyForRecord(record);
+            if (!(k in mapOfPoints)) {
+                mapOfPoints[k] = [];
+            }
+            mapOfPoints[k].push(record);
+            console.debug('there are ' + mapOfPoints[k].length + ' records associated with the key ' + k)
+        });
+
+        // now loop through normalized results and setup markers
+        var contentForInfoPoint = function (records) {
+            var c = '';
+            if (records.length == 1) {
+                var r = records [0];
+                c = '<h1>' + $scope.cleanName(r) + '</h1>' + '<P>' + r.email + '</P>';
             }
             else {
-                return s;
+                c = '(' + records.length + ' results)';
             }
-
+            return c;
         };
 
 
-        function toggleAll(v) {
-            jQuery.each($scope.results, function (i, record) {
-                record.expanded = v;
+        $scope.focusOnResults = function (records) {
+            $scope.$apply(function () {
+
+
+                oldResults = $scope.results;
+                $scope.results = records;
+                jQuery.each($scope.results, function (i, record) {
+                    record.expanded = false;
+                });
+                if ($scope.results.length == 1) {
+                    $scope.focusOnResult($scope.results[0])
+                }
+
             });
-        }
-
-        $scope.removeFocusFromAllResults = function () {
-            toggleAll(false);
         };
-        $scope.focusOnAllResults = function () {
-            toggleAll(true);
+        $scope.removeResultFocus = function (record) {
+            record.expanded = false;
+        };
+        $scope.focusOnResult = function (record) {
+            record.expanded = true
+        };
+
+        var positionForInfoPoint = function (records) {
+            var latLong = records.length >= 1 ? records[0] : null;
+            console.debug('latLong:' + JSON.stringify(latLong));
+            return new google.maps.LatLng(latLong.latitude, latLong.longitude);
+        };
+
+
+        jQuery.each(mapOfPoints, function (k, v) {
+            var records = v;
+            console.debug(k + '=' + v.length);
+            var content = contentForInfoPoint(v);
+            var marker = new google.maps.Marker({
+                visible: true,
+                map: map,
+                title: content,
+                position: positionForInfoPoint(v)
+            });
+
+            markers.push(marker);
+
+            google.maps.event.addListener(marker, 'click', function () {
+
+                // lets also draw a InfoWindow
+
+                // first, lets make it so that clcking on somehting loads the details in the side bar
+
+                $scope.focusOnResults(records);
+
+
+                map.setZoom(8);
+                map.setCenter(marker.getPosition());
+            });
+
+            console.debug('adding a marker for ' + content)
+        });
+    };
+
+
+    navigator.geolocation.getCurrentPosition(function (position) {
+        var pos = toLatLng(position);
+        map = new google.maps.Map(document.getElementById('map-canvas'), { mapTypeControl: false, center: pos, zoom: 13  });
+        new google.maps.InfoWindow({
+            map: map,
+            position: pos,
+            content: 'You Are Here.'
+        });
+        $('#console').css({'z-index': '100'});
+    });
+
+
+    /// public methods
+
+    $scope.cleanName = function (r) {
+        var fn = r.firstName.toLowerCase(),
+                ln = r.lastName.toLowerCase();
+        fn = (fn.charAt(0) + '').toUpperCase() + fn.substring(1);
+        ln = (ln.charAt(0) + '').toUpperCase() + ln.substring(1);
+        return ln + ', ' + fn;
+    };
+
+    $scope.process = function () {
+        $http.post('/process', $scope.query).success(function (data) {
+            $scope.batchData = data;
+            $scope.batchId = $scope.batchData.batchId;
+            $http.get('/results/' + $scope.batchId).success(function (results) {
+                renderResults(results);
+            });
+        });
+    };
+
+    $scope.address = function (r) {
+        function hasText(s) {
+            return (s == null || s == '' ? false : true);
         }
-        $scope.process();
 
-    }
+        var s = '';
+
+        if (hasText(r.street)) s += r.street + ' ';
+        if (hasText(r.city)) s += r.city + ',';
+        if (hasText(r.state)) s += ' ' + r.state + '. ';
+        if (hasText(r.postalCode)) s += ' ' + r.postalCode;
+        if (!hasText(s)) {
+            return '(location unknown)';
+        }
+        else {
+            return s;
+        }
+
+    };
 
 
-    //]]>
+    $scope.removeFocusFromAllResults = function () {
+        toggleAll(false);
+    };
+    $scope.focusOnAllResults = function () {
+        toggleAll(true);
+    };
+}
+
+
+//]]>
 </script>
 
 

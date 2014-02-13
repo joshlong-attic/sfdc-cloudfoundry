@@ -9,7 +9,7 @@
 
     <fss:oauth>
         <fss:oauthInfo endpoint="http://login.salesforce.com"
-                       oauth-key="${clientKey}" oauth-secret="${clientSecret}"/>
+                       oauth-key="${sfdc.clientKey}" oauth-secret="${sfdc.clientSecret}"/>
 
     </fss:oauth>
 

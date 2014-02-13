@@ -31,7 +31,7 @@ class SfdcRestController {
     @Value("${processor.requests}")
     String destination;
 
-    @Autowired
+    //@Autowired
     RabbitTemplate rabbitTemplate;
 
     @Autowired
